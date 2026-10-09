@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+lab/nginx/certs/*.crt
+lab/nginx/certs/*.key
+.env
+*.log
+ckinject-report-*.json
+.DS_Store
