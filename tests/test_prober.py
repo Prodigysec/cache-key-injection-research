@@ -29,7 +29,7 @@ def safe_server():
 def test_detects_collision_on_ambiguous_key(vulnerable_server):
     results = probe_pair(
         base_url=vulnerable_server,
-        base_path="",
+        base_path="/",
         slot_a=path_suffix_slot(),
         slot_b=header_slot("Accept"),
         marker_length=10,
@@ -43,7 +43,7 @@ def test_detects_collision_on_ambiguous_key(vulnerable_server):
 def test_no_collision_on_delimited_key(safe_server):
     results = probe_pair(
         base_url=safe_server,
-        base_path="",
+        base_path="/",
         slot_a=path_suffix_slot(),
         slot_b=header_slot("Accept"),
         marker_length=10,
