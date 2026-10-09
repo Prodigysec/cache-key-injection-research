@@ -57,7 +57,14 @@ def _build_request(base_url: str, base_path: str) -> dict:
 def _send(session: requests.Session, base_url: str, req: dict, timeout: float, verify: bool, cache_buster: str) -> requests.Response:
     params = dict(req["params"])
     params.setdefault("ckbuster", cache_buster)
-    url = base_url.rstrip("/") + req["path"]
+    path = req["path"]
+    if not path.startswith("/"):
+        # Guards against a bare "" or a no-leading-slash base_path (from
+        # the CLI or a caller) combined with path_suffix_slot() producing
+        # something like "base_urlMARKER" with no "/" at all, which
+        # requests/urllib3 can't parse as a URL.
+        path = "/" + path
+    url = base_url.rstrip("/") + path
     return session.get(url, headers=req["headers"], params=params, timeout=timeout, verify=verify, allow_redirects=False)
 
 
