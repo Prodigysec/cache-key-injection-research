@@ -1,0 +1,128 @@
+{
+  "sampling": "public seed repos, sorted paths, capped per repo",
+  "files": [
+    {
+      "repo": "nginx/nginx",
+      "commit": "2b5c2b605b5df669da5dec6749dcc76c07d1315d",
+      "upstream_path": "conf/fastcgi.conf",
+      "source": "https://github.com/nginx/nginx/blob/2b5c2b605b5df669da5dec6749dcc76c07d1315d/conf/fastcgi.conf",
+      "file": "b2c3d480a58f61f3.conf",
+      "sha256": "b2c3d480a58f61f3a7dc61850b461e892e36f236317765a4f2f6d558c928fa57",
+      "kind": "nginx"
+    },
+    {
+      "repo": "nginx/nginx",
+      "commit": "2b5c2b605b5df669da5dec6749dcc76c07d1315d",
+      "upstream_path": "conf/nginx.conf",
+      "source": "https://github.com/nginx/nginx/blob/2b5c2b605b5df669da5dec6749dcc76c07d1315d/conf/nginx.conf",
+      "file": "28924d8c868aedb9.conf",
+      "sha256": "28924d8c868aedb98e996bd4af1e3c4342d532e59f0ed7bd0e406905e0fb2fa0",
+      "kind": "nginx"
+    },
+    {
+      "repo": "varnishcache/varnish-cache",
+      "commit": "0038dd19804fd92cd8bd4bfe92e5a515a57d5e8e",
+      "upstream_path": "bin/varnishd/builtin.vcl",
+      "source": "https://github.com/varnishcache/varnish-cache/blob/0038dd19804fd92cd8bd4bfe92e5a515a57d5e8e/bin/varnishd/builtin.vcl",
+      "file": "a2e6d653d3f959e3.vcl",
+      "sha256": "a2e6d653d3f959e3e7b47e2adf35e8b4a0c0a05c3c0a27034838d877fb1b8e73",
+      "kind": "vcl"
+    },
+    {
+      "repo": "varnishcache/varnish-cache",
+      "commit": "0038dd19804fd92cd8bd4bfe92e5a515a57d5e8e",
+      "upstream_path": "etc/devicedetect.vcl",
+      "source": "https://github.com/varnishcache/varnish-cache/blob/0038dd19804fd92cd8bd4bfe92e5a515a57d5e8e/etc/devicedetect.vcl",
+      "file": "7c0c96ccb3da3827.vcl",
+      "sha256": "7c0c96ccb3da382732a484b95a8a4aaaf7cc34fd6eb09c1e4d775acae9f77cb9",
+      "kind": "vcl"
+    },
+    {
+      "repo": "varnishcache/varnish-cache",
+      "commit": "0038dd19804fd92cd8bd4bfe92e5a515a57d5e8e",
+      "upstream_path": "etc/example.vcl",
+      "source": "https://github.com/varnishcache/varnish-cache/blob/0038dd19804fd92cd8bd4bfe92e5a515a57d5e8e/etc/example.vcl",
+      "file": "f17ef892166535d7.vcl",
+      "sha256": "f17ef892166535d7dba0fecd8e91bf10736adda2627bf966d1292b427bd1c44b",
+      "kind": "vcl"
+    },
+    {
+      "repo": "h5bp/server-configs-nginx",
+      "commit": "d2f2c3e2fac76f429adb738894499b8fb756d2f3",
+      "upstream_path": "conf.d/.default.conf",
+      "source": "https://github.com/h5bp/server-configs-nginx/blob/d2f2c3e2fac76f429adb738894499b8fb756d2f3/conf.d/.default.conf",
+      "file": "a3c0799425b9502b.conf",
+      "sha256": "a3c0799425b9502b3ab0e43d7d3c9043f35499f889a40231cc0c413b0f933790",
+      "kind": "nginx"
+    },
+    {
+      "repo": "h5bp/server-configs-nginx",
+      "commit": "d2f2c3e2fac76f429adb738894499b8fb756d2f3",
+      "upstream_path": "conf.d/no-ssl.default.conf",
+      "source": "https://github.com/h5bp/server-configs-nginx/blob/d2f2c3e2fac76f429adb738894499b8fb756d2f3/conf.d/no-ssl.default.conf",
+      "file": "23fa7db2bd4e102a.conf",
+      "sha256": "23fa7db2bd4e102a1c2b3ca6fc0c4268bf6222c9852cc4288d027c063228c538",
+      "kind": "nginx"
+    },
+    {
+      "repo": "h5bp/server-configs-nginx",
+      "commit": "d2f2c3e2fac76f429adb738894499b8fb756d2f3",
+      "upstream_path": "conf.d/templates/example.com.conf",
+      "source": "https://github.com/h5bp/server-configs-nginx/blob/d2f2c3e2fac76f429adb738894499b8fb756d2f3/conf.d/templates/example.com.conf",
+      "file": "043b073e9149360d.conf",
+      "sha256": "043b073e9149360d7c88a5d83e06e3c01cf8c1bc1f1cf7744d44b17b0f1905f7",
+      "kind": "nginx"
+    },
+    {
+      "repo": "h5bp/server-configs-nginx",
+      "commit": "d2f2c3e2fac76f429adb738894499b8fb756d2f3",
+      "upstream_path": "conf.d/templates/no-ssl.example.com.conf",
+      "source": "https://github.com/h5bp/server-configs-nginx/blob/d2f2c3e2fac76f429adb738894499b8fb756d2f3/conf.d/templates/no-ssl.example.com.conf",
+      "file": "d5ade7daa79038c3.conf",
+      "sha256": "d5ade7daa79038c301c190c827522a47371adef739093af051fdfbb1b3b076e4",
+      "kind": "nginx"
+    },
+    {
+      "repo": "h5bp/server-configs-nginx",
+      "commit": "d2f2c3e2fac76f429adb738894499b8fb756d2f3",
+      "upstream_path": "h5bp/basic.conf",
+      "source": "https://github.com/h5bp/server-configs-nginx/blob/d2f2c3e2fac76f429adb738894499b8fb756d2f3/h5bp/basic.conf",
+      "file": "e16d92bb466dca64.conf",
+      "sha256": "e16d92bb466dca64661ea765e36c7c7c062ea45664ae5bc4bd523430557c90c0",
+      "kind": "nginx"
+    },
+    {
+      "repo": "h5bp/server-configs-nginx",
+      "commit": "d2f2c3e2fac76f429adb738894499b8fb756d2f3",
+      "upstream_path": "h5bp/cross-origin/requests.conf",
+      "source": "https://github.com/h5bp/server-configs-nginx/blob/d2f2c3e2fac76f429adb738894499b8fb756d2f3/h5bp/cross-origin/requests.conf",
+      "file": "855fc5bb1de4c90e.conf",
+      "sha256": "855fc5bb1de4c90ecabb6e5b6b63756cdec4b8538b59af10e836667b96802b14",
+      "kind": "nginx"
+    },
+    {
+      "repo": "h5bp/server-configs-nginx",
+      "commit": "d2f2c3e2fac76f429adb738894499b8fb756d2f3",
+      "upstream_path": "h5bp/cross-origin/resource_timing.conf",
+      "source": "https://github.com/h5bp/server-configs-nginx/blob/d2f2c3e2fac76f429adb738894499b8fb756d2f3/h5bp/cross-origin/resource_timing.conf",
+      "file": "ddce661e8d7b5437.conf",
+      "sha256": "ddce661e8d7b5437b50779674314f40614c077b4b8bd681bff90c7104189558e",
+      "kind": "nginx"
+    },
+    {
+      "repo": "h5bp/server-configs-nginx",
+      "commit": "d2f2c3e2fac76f429adb738894499b8fb756d2f3",
+      "upstream_path": "h5bp/errors/custom_errors.conf",
+      "source": "https://github.com/h5bp/server-configs-nginx/blob/d2f2c3e2fac76f429adb738894499b8fb756d2f3/h5bp/errors/custom_errors.conf",
+      "file": "98a8d97ba80cf7e3.conf",
+      "sha256": "98a8d97ba80cf7e34334c26d07ff5197744ced1decfaf6f213ab63acb06a7c41",
+      "kind": "nginx"
+    }
+  ],
+  "errors": [
+    {
+      "repo": "magento/magento2",
+      "error": "incomplete GitHub response after retries"
+    }
+  ]
+}

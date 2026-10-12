@@ -1,0 +1,6 @@
+{
+  "files": 13,
+  "findings": [],
+  "parse_errors": [],
+  "note": "Nginx and VCL linters actually ran on all 13 files; Semgrep pending."
+}
