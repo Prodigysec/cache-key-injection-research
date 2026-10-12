@@ -16,6 +16,8 @@
 rules:
   - id: cache-key-concat-no-delimiter-fstring
     languages: [python]
+    options:
+      symbolic_propagation: true
     severity: WARNING
     message: >
       Cache/lookup key appears to be built by directly concatenating two
