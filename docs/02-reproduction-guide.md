@@ -132,6 +132,34 @@ be absorbed by the edge cache and never reach Nginx's ambiguous key logic.
 
 Or: `./scripts/run-scenario.sh cdn-bypass`
 
+## Generic fuzzing target (for `tool/ckinject`, not a scenario)
+
+Scenarios 1, 2 and 4 all collide a single *named* pair (`/admin`↔`/ad`,
+`/home`↔`/h`, `/XYZ`↔`/XY`) — the Nginx locations behind them are
+exact-match, built to demonstrate one specific pair from the article.
+`ckinject probe`'s generic split-marker technique needs an endpoint that
+accepts *arbitrary* path suffixes and reflects them back, which none of
+the scenario endpoints do.
+
+`/fuzz` is that endpoint: a prefix-matched Nginx location using the same
+ambiguous key, backed by a Flask route that echoes back the full path and
+every header/query param the default probe pairs test. Run the fuzzer
+against the live lab with:
+
+```bash
+cd ../tool
+python -m ckinject.cli probe --target http://localhost:8080 --base-path /fuzz
+```
+
+You should see collisions reported for `path_suffix <-> header:Accept`,
+`<-> header:Accept-Language`, `<-> header:Accept-Encoding`, and
+`<-> header:X-Test-Header` (all four share the same ambiguous key as the
+named scenarios), but not for `query:ckprobe <-> header:Accept` (query
+parameters aren't part of this key formula, since `$is_args$args` only
+contributes when a query string is present at all — `ckinject` sends one,
+but the *position* of a query string in the concatenated key isn't
+ambiguous with a header the way two adjacent string fragments are).
+
 ## Cleanup
 
 ```bash

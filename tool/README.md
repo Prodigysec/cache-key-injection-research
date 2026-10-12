@@ -32,8 +32,14 @@ everywhere you see `ckinject` below; they're equivalent.
 ### Generic boundary probe
 
 ```bash
-ckinject probe --target http://localhost:8080 --base-path /anyendpoint
+ckinject probe --target http://localhost:8080 --base-path /fuzz
 ```
+
+Against the lab in this repo, use `/fuzz` specifically — it's the one
+general-purpose target built to accept arbitrary path suffixes. The
+other lab endpoints (`/admin`, `/anyendpoint`, `/home`, ...) are
+exact-match Nginx locations demonstrating one specific pair from the
+original article each, and won't route a suffixed path anywhere useful.
 
 Runs the default candidate pairs (URI suffix vs. `Accept`,
 `Accept-Language`, `Accept-Encoding`, a custom test header; `Accept` vs.

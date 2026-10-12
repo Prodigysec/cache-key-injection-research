@@ -55,6 +55,28 @@ def xyz():
     return "secret endpoint XYZ reached"
 
 
+@app.route("/fuzz", defaults={"rest": ""})
+@app.route("/fuzz<rest>")
+def fuzz(rest):
+    # General-purpose target for ckinject's generic boundary probe
+    # (see tool/README.md). Unlike the scenario-specific endpoints above,
+    # this accepts ANY suffix after /fuzz and reflects back the full path
+    # plus every header/query param ckinject's default pairs test, so a
+    # genuine boundary collision is visible in the response body/fingerprint
+    # instead of every request just 404ing identically. Paired with
+    # nginx.conf's "location /fuzz" (prefix match, same ambiguous key as
+    # the other scenarios) rather than an exact-match location.
+    fields = {
+        "path": request.path,
+        "accept": request.headers.get("Accept", ""),
+        "accept_language": request.headers.get("Accept-Language", ""),
+        "accept_encoding": request.headers.get("Accept-Encoding", ""),
+        "x_test_header": request.headers.get("X-Test-Header", ""),
+        "ckprobe": request.args.get("ckprobe", ""),
+    }
+    return "|".join(f"{k}={v}" for k, v in fields.items())
+
+
 # Everything else (/ad, /h, /anyend, /XY, ...) falls through to Flask's
 # default 404 — this is intentional. The CPDoS and cache-deception
 # scenarios rely on the *cache* serving a stored response for these paths

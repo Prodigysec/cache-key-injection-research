@@ -69,7 +69,7 @@ curl -s -H "Accept: min*/*" http://localhost:8080/ad -D -      # collides, retur
 # 3. Run the fuzzer against the lab
 cd ../tool
 pip install -e .
-python -m ckinject.cli probe --target http://localhost:8080 --base-path /anyendpoint
+python -m ckinject.cli probe --target http://localhost:8080 --base-path /fuzz
 ```
 
 `python -m ckinject.cli` works regardless of PATH and is what this guide
@@ -78,6 +78,13 @@ uses throughout. The `ckinject` command itself also gets installed by
 `Scripts` folder that isn't on PATH by default (pip will warn you about
 this at install time) — either add that folder to PATH, or just stick
 with the `python -m` form above.
+
+Use `/fuzz` here, not `/anyendpoint` or any of the other scenario paths —
+those are exact-match Nginx locations built to demonstrate one specific
+pair from the article, and don't accept the arbitrary path suffixes
+`ckinject probe`'s generic technique needs. `/fuzz` is a dedicated
+general-purpose target (prefix-matched in `nginx.conf`, reflected back by
+`lab/backend/app.py`) for exercising the fuzzer itself against the lab.
 
 The startup script creates the certificate directory and generates certificates
 using relative paths compatible with Windows OpenSSL. It reuses existing

@@ -95,6 +95,35 @@ jobs:
           echo "status=$STATUS"
           test "$STATUS" = "404"
 
+      - name: Verify /fuzz collides and ckinject detects it (generic probe target)
+        run: |
+          # Manual check that /fuzz itself collides, independent of the tool.
+          # Note: curl silently drops a header written as "Name:" (nothing
+          # after the colon) instead of sending it empty -- "Name;" is the
+          # documented way to force an actually-empty header value.
+          BASELINE=$(curl -s -H "Accept;" "http://localhost:8080/fuzzabcdefghij?ckbuster=fx1")
+          SHIFTED=$(curl -s -H "Accept: bcdefghij" "http://localhost:8080/fuzza?ckbuster=fx1")
+          echo "baseline=$BASELINE"
+          echo "shifted=$SHIFTED"
+          test "$BASELINE" = "$SHIFTED"
+
+          # Now the real end-to-end check: does ckinject itself detect it?
+          cd tool
+          pip install -q -e .
+          # ckinject exits 1 when it finds a collision (that's the
+          # expected, desired outcome here) -- don't let the GH Actions
+          # default `set -e` kill the step on that exit code.
+          python -m ckinject.cli probe --target http://localhost:8080 --base-path /fuzz --output /tmp/ckinject-report.json || true
+          python3 -c "
+          import json
+          results = json.load(open('/tmp/ckinject-report.json'))
+          collided_pairs = {r['pair'] for r in results if r['collided']}
+          print('Collided pairs:', collided_pairs)
+          expected = {'path_suffix <-> header:Accept'}
+          missing = expected - collided_pairs
+          assert not missing, f'Expected collision(s) not detected: {missing}'
+          "
+
       - name: Dump logs on failure
         if: failure()
         run: docker compose -f lab/docker-compose.yml logs
