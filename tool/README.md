@@ -22,6 +22,11 @@ pip install -r requirements.txt
 python -m ckinject.cli probe --target http://localhost:8080
 ```
 
+Everything below uses the bare `ckinject` command for brevity. If it's
+not on PATH after `pip install -e .` (common on Windows — pip warns
+about this at install time), substitute `python -m ckinject.cli`
+everywhere you see `ckinject` below; they're equivalent.
+
 ## Usage
 
 ### Generic boundary probe

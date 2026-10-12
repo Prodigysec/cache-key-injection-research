@@ -69,8 +69,15 @@ curl -s -H "Accept: min*/*" http://localhost:8080/ad -D -      # collides, retur
 # 3. Run the fuzzer against the lab
 cd ../tool
 pip install -e .
-ckinject probe --target http://localhost:8080 --baseline-path /anyendpoint
+python -m ckinject.cli probe --target http://localhost:8080 --base-path /anyendpoint
 ```
+
+`python -m ckinject.cli` works regardless of PATH and is what this guide
+uses throughout. The `ckinject` command itself also gets installed by
+`pip install -e .`, but on Windows its `.exe` typically lands in a
+`Scripts` folder that isn't on PATH by default (pip will warn you about
+this at install time) — either add that folder to PATH, or just stick
+with the `python -m` form above.
 
 The startup script creates the certificate directory and generates certificates
 using relative paths compatible with Windows OpenSSL. It reuses existing
