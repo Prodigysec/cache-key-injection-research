@@ -134,7 +134,38 @@ The article's Cloudflare section is a single bypass trick
       `proxy_cache_key` / `hash_data()` patterns concatenating 2+
       variable-length fragments without a separator. High signal, zero
       false-negatives-by-construction, much cheaper than black-box fuzzing
-      when you have the config.
+      when you have the config. See Track F below — this is the starting
+      point for a fuller dataflow-based version of the same idea.
+
+## Track F — Static dataflow analysis (source-level taint tracing)
+
+Every other track above is black-box: infer the key's structure from
+behavior. This track goes white-box: trace the actual data flow, in
+source, from request-derived values through string concatenation to the
+final cache key, across the real codebases of the cache implementations
+themselves. Full methodology, per-ecosystem approach (Nginx, Varnish
+VCL, Apache `mod_cache`, app-level/GraphQL caches), and a starter
+Semgrep rule set live in `docs/06-static-analysis-dataflow.md` and
+`tool/static-analysis/`.
+
+- [ ] Run the starter Semgrep rules (`tool/static-analysis/`) against
+      any source-available bug bounty target already in scope — cheap
+      addition to normal recon, not a separate project phase.
+- [ ] Build the VCL control-flow-aware linter described in the doc
+      (parse `vcl_hash`, track reachable `hash_data()` call sequences per
+      branch) — meaningfully harder than the Nginx string-split linter
+      above because VCL has real control flow.
+- [ ] Pull a real-world Nginx/VCL config corpus (GitHub code search) and
+      run both linters at scale — likely the highest find-rate-per-hour
+      activity in this entire roadmap, since it needs no live target at
+      all.
+- [ ] Scope out a CodeQL/Joern pass on `mod_cache` (Apache) or Nginx's
+      own core as a separate, bigger sub-project — an upstream OSS
+      finding here is a different kind of win (project disclosure) than
+      a single bug bounty target.
+- [ ] Extend the Semgrep rules to more languages/frameworks (Java/Spring,
+      Ruby/Rails, Go) as you encounter real app-level caching code in
+      those stacks during engagements.
 
 ## Suggested order of attack for a solo researcher
 
@@ -143,9 +174,11 @@ The article's Cloudflare section is a single bypass trick
    instantly in a HAR file or a cache-behavior diff.
 2. Build out Track E's fuzzer far enough to automate the split-marker
    test from the original article (already scaffolded in `tool/`).
-3. Pick ONE of Track A/B/C/D to go deep on based on what you have access
-   to (your own CDN account → Track D; access to a multi-tenant SaaS
-   target in scope → Track C; source-available target → Track E's static
-   analyzer). Depth beats breadth for actually finding a reportable bug.
+3. Pick ONE of Track A/B/C/D/F to go deep on based on what you have
+   access to (your own CDN account → Track D; access to a multi-tenant
+   SaaS target in scope → Track C; source-available target → Track F's
+   static analysis). Depth beats breadth for actually finding a
+   reportable bug. Track F is worth prioritizing if you want the best
+   find-rate per hour of effort with no live target required at all.
 4. Use `docs/04-testing-methodology.md` before touching anything live,
    and `docs/05-findings-template.md` once you have something to report.
