@@ -21,6 +21,11 @@ extends it with:
   implementations (Varnish, CDNs, app-level caches), encoding/normalization
   angles, and higher-severity impact classes (cross-tenant leakage, plan/tier
   confusion) beyond what the original write-up demonstrated.
+- A white-box complement to the above: source-level taint tracing of
+  cache key construction (sources → unsafe concatenation → sink) across
+  Nginx, Varnish VCL, Apache `mod_cache`, and app-level/GraphQL caches,
+  with a starter Semgrep rule set (`docs/06-static-analysis-dataflow.md`,
+  `tool/static-analysis/`).
 - A findings template and testing methodology for turning a lab result into
   a reportable bug bounty submission.
 
@@ -37,10 +42,12 @@ to test.
 ## Layout
 
 ```
-docs/                     Background, reproduction guide, roadmap, methodology, findings template
-lab/                       Docker lab: Nginx + backend, one scenario per documented primitive
-tool/ckinject/             Boundary-fuzzing CLI (black-box key-collision prober)
-tests/                     Automated checks that the lab scenarios behave as documented
+docs/                      Background, reproduction guide, roadmap, methodology,
+                            findings template, static-analysis/dataflow methodology
+lab/                        Docker lab: Nginx + backend, one scenario per documented primitive
+tool/ckinject/              Boundary-fuzzing CLI (black-box key-collision prober)
+tool/static-analysis/       White-box: Semgrep rules for ambiguous cache-key concatenation
+tests/                      Automated checks that the lab scenarios behave as documented
 ```
 
 ## Quick start
