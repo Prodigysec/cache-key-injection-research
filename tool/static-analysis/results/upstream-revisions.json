@@ -1,0 +1,5 @@
+{
+  "apache": "9e1473f2c6143401cc4ade0a5188966532ac30e8",
+  "nginx": "2b5c2b605b5df669da5dec6749dcc76c07d1315d",
+  "varnish": "0038dd19804fd92cd8bd4bfe92e5a515a57d5e8e"
+}

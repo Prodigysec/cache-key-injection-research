@@ -1,0 +1,13 @@
+CLI: CodeQL 2.23.8; cpp-all: 6.1.3 (locked dependencies committed)
+Nginx database: created, 272 extraction commands: s=0,p=272,f=0
+Varnish database: created, 223 extraction commands: s=1,p=222,f=0
+Apache sparse cache-module database: created, 11 extraction commands: s=0,p=11,f=0
+(p means partial; missing generated/platform/APR headers limit coverage.)
+Both queries compiled and ran successfully on all three databases.
+Nginx: no findings (0 SARIF results).
+Varnish: no findings (0 SARIF results).
+Apache: no findings (0 SARIF results).
+These are actual zero-result scans on partial extractions, NOT evidence of absence of upstream bugs.
+Earlier full query compile attempts failed with insufficient Java native memory/paging file errno1455. CodeQL raised requested --ram=1024 to minimum2466. Initial QL syntax errors were corrected after real check-only validation. Single-threaded, sequential database analysis succeeded.
+Extraction inventory initially failed with unsupported hasBody() and then a memory error; corrected version pending rerun.
+Joern was not used because real CodeQL extraction and query execution succeeded.
