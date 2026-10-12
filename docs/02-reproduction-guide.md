@@ -7,9 +7,21 @@ This walks through all four documented primitives against the lab in
 
 ```bash
 cd lab
-./scripts/gen-certs.sh
-docker compose up -d --build
+bash scripts/start-lab.sh
 ```
+
+Run setup in Bash (Git Bash on Windows). The script generates certificates
+in `lab/nginx/certs`, exports the Compose build definition to a temporary
+file, builds it directly with `docker buildx bake --load`, and starts the
+services with `--no-build`. This avoids the Compose-to-Bake stdin pipe error
+without using the deprecated `COMPOSE_BAKE=false` setting. The temporary
+build definition is removed on exit, and setup stops if any step fails.
+
+The script resolves paths from its own location. From the repository root,
+use `bash lab/scripts/start-lab.sh`; from `lab/nginx/certs`, use
+`bash ../../scripts/start-lab.sh`. Run the same command again after changing
+a Dockerfile or application code. Docker reuses cached layers and existing
+nonempty certificate files.
 
 Services:
 

@@ -45,16 +45,18 @@ tests/                     Automated checks that the lab scenarios behave as doc
 
 ## Quick start
 
+Prerequisites: Docker Desktop (or Docker Engine) running with Linux containers,
+Docker Compose and Buildx, Bash (Git Bash on Windows), OpenSSL, and Python/pip
+for the CLI tool.
+
 ```bash
 # 1. Stand up the lab
 cd lab
-chmod +x scripts/*.sh
-./scripts/gen-certs.sh
-docker compose up -d --build
+bash scripts/start-lab.sh
 
 # 2. Reproduce the ACL-bypass / cache-deception scenario
 curl -s -o /dev/null -w "%{http_code}\n" -H "Accept: */*" http://localhost:8080/admin  # 403, denied (not localhost)
-./scripts/seed-admin-cache.sh                                  # seeds the cache as if requested from localhost
+bash scripts/seed-admin-cache.sh                              # seeds the cache as if requested from localhost
 curl -s -H "Accept: min*/*" http://localhost:8080/ad -D -      # collides, returns cached admin response
 
 # 3. Run the fuzzer against the lab
@@ -62,6 +64,20 @@ cd ../tool
 pip install -e .
 ckinject probe --target http://localhost:8080 --baseline-path /anyendpoint
 ```
+
+The startup script creates the certificate directory and generates certificates
+using relative paths compatible with Windows OpenSSL. It reuses existing
+nonempty certificates, exports the Compose build configuration to a temporary
+file, builds through Bake directly, and starts containers with `--no-build`.
+This avoids the Compose-to-Bake pipe error and the deprecated
+`COMPOSE_BAKE=false` workaround. The temporary file is removed on exit,
+and a failed setup step prevents startup.
+
+The script resolves paths from its own location. From the repository root,
+run `bash lab/scripts/start-lab.sh`; if you are already in
+`lab/nginx/certs`, run `bash ../../scripts/start-lab.sh`. Run it again to
+rebuild and restart after code changes. Check service status from `lab/`
+with `docker compose ps`.
 
 See `docs/02-reproduction-guide.md` for the full walkthrough of all four
 scenarios, and `docs/03-research-roadmap.md` for what to build on next.
