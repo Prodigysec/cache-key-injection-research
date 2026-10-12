@@ -1,0 +1,6 @@
+Semgrep version: 1.180.0
+Command: python tool/static-analysis/check_fixtures.py
+Exit code: 0
+OK: all 3 VULNERABLE_* functions flagged, all 3 SAFE_* functions clean.
+
+Important: SAFE_delimited uses a bare pipe and is not a generally safe key. The helper has no weak-boundary, JS/TS, or GraphQL tests. Earlier incomplete-runtime attempts failed (missing opentelemetry / JSONDecodeError); this baseline was rerun after installation completed.

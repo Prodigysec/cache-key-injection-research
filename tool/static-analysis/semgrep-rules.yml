@@ -1,140 +1,1048 @@
-# Starter Semgrep rules for the taint model described in
-# docs/06-static-analysis-dataflow.md: flag cache-key construction that
-# concatenates two or more request-derived values with no delimiter
-# between them, in app-level (Python/JS) caching code.
-#
-# These are intraprocedural and pattern-based -- they catch the common,
-# local case (source and sink in the same function) but not the deeper
-# interprocedural case that needs CodeQL (see the doc). Treat every hit
-# as a LEAD to manually verify (is the separator actually safe? are both
-# sources actually attacker-controlled?), not a confirmed bug.
-#
-# Run with:
-#   pip install semgrep
-#   semgrep --config tool/static-analysis/semgrep-rules.yml <path-to-target-repo>
-
-rules:
-  - id: cache-key-concat-no-delimiter-fstring
-    languages: [python]
-    options:
-      symbolic_propagation: true
-    severity: WARNING
-    message: >
-      Cache/lookup key appears to be built by directly concatenating two
-      request-derived values (via an f-string) with no delimiter between
-      them. If both values are attacker-controlled and variable-length,
-      this may be vulnerable to the cache key injection pattern described
-      in docs/01-background.md: an attacker can shift characters across
-      the fragment boundary to collide two different requests onto the
-      same key. Verify whether a separator exists and whether it's safe
-      (see docs/06-static-analysis-dataflow.md, "Delimiters can be unsafe
-      too").
-    patterns:
-      - pattern-either:
-          - pattern: $CACHE.get(f"...{$A}{$B}...")
-          - pattern: $CACHE.set(f"...{$A}{$B}...", ...)
-          - pattern: $CACHE.get(f"...{$A}{$B}...", ...)
-      - metavariable-pattern:
-          metavariable: $A
-          patterns:
-            - pattern-either:
-                - pattern: request.headers.get(...)
-                - pattern: request.headers[...]
-                - pattern: request.GET.get(...)
-                - pattern: request.GET[...]
-                - pattern: request.args.get(...)
-                - pattern: request.args[...]
-                - pattern: request.cookies.get(...)
-                - pattern: request.cookies[...]
-                - pattern: request.path
-                - pattern: request.full_path
-      - metavariable-pattern:
-          metavariable: $B
-          patterns:
-            - pattern-either:
-                - pattern: request.headers.get(...)
-                - pattern: request.headers[...]
-                - pattern: request.GET.get(...)
-                - pattern: request.GET[...]
-                - pattern: request.args.get(...)
-                - pattern: request.args[...]
-                - pattern: request.cookies.get(...)
-                - pattern: request.cookies[...]
-                - pattern: request.path
-                - pattern: request.full_path
-
-  - id: cache-key-concat-no-delimiter-plus
-    languages: [python]
-    severity: WARNING
-    message: >
-      Cache/lookup key appears to be built via "+" string concatenation
-      of two request-derived values with no delimiter between them. Same
-      risk as cache-key-concat-no-delimiter-fstring -- verify separator
-      presence and strength.
-    patterns:
-      - pattern-either:
-          - pattern: $CACHE.get($A + $B)
-          - pattern: $CACHE.set($A + $B, ...)
-      - metavariable-pattern:
-          metavariable: $A
-          patterns:
-            - pattern-either:
-                - pattern: request.headers.get(...)
-                - pattern: request.path
-                - pattern: request.args.get(...)
-      - metavariable-pattern:
-          metavariable: $B
-          patterns:
-            - pattern-either:
-                - pattern: request.headers.get(...)
-                - pattern: request.path
-                - pattern: request.args.get(...)
-
-  - id: cache-key-concat-no-delimiter-js-template-literal
-    languages: [javascript, typescript]
-    severity: WARNING
-    message: >
-      Cache/lookup key appears to be built via a template literal that
-      directly concatenates two request-derived values with no delimiter
-      between them (e.g. `${req.path}${req.headers['accept']}`). Same
-      risk as the Python rules above -- verify separator presence and
-      strength before treating this as a confirmed bug.
-    patterns:
-      - pattern-either:
-          - pattern: $CACHE.get(`...${$A}${$B}...`)
-          - pattern: $CACHE.set(`...${$A}${$B}...`, ...)
-      - metavariable-pattern:
-          metavariable: $A
-          patterns:
-            - pattern-either:
-                - pattern: req.headers[...]
-                - pattern: req.headers.get(...)
-                - pattern: req.query[...]
-                - pattern: req.cookies[...]
-                - pattern: req.path
-                - pattern: req.originalUrl
-      - metavariable-pattern:
-          metavariable: $B
-          patterns:
-            - pattern-either:
-                - pattern: req.headers[...]
-                - pattern: req.headers.get(...)
-                - pattern: req.query[...]
-                - pattern: req.cookies[...]
-                - pattern: req.path
-                - pattern: req.originalUrl
-
-  - id: cache-key-graphql-naive-concat
-    languages: [javascript, typescript]
-    severity: INFO
-    message: >
-      Persisted-query / API-gateway cache key built by concatenating a
-      query id directly with a serialized variables object. If the
-      query id isn't a fixed length and isn't separated from the
-      serialized variables by a delimiter neither can contain, this may
-      be vulnerable to the same boundary-collision pattern. See
-      docs/06-static-analysis-dataflow.md for the GraphQL-specific note.
-    patterns:
-      - pattern-either:
-          - pattern: $CACHE.get($QUERYID + JSON.stringify($VARS))
-          - pattern: $CACHE.set($QUERYID + JSON.stringify($VARS), ...)
+{
+  "rules": [
+    {
+      "id": "cache-key-python-no-delimiter",
+      "languages": [
+        "python"
+      ],
+      "mode": "taint",
+      "severity": "WARNING",
+      "message": "Two request-derived operands reach a cache key through an unframed join. Static lead: verify distinct sources, variable lengths and sink use.",
+      "pattern-sources": [
+        {
+          "pattern-either": [
+            {
+              "pattern": "request.path"
+            },
+            {
+              "pattern": "request.full_path"
+            },
+            {
+              "pattern": "request.url.path"
+            },
+            {
+              "pattern": "request.headers.get(...)"
+            },
+            {
+              "pattern": "request.headers[...]"
+            },
+            {
+              "pattern": "request.GET.get(...)"
+            },
+            {
+              "pattern": "request.GET[...]"
+            },
+            {
+              "pattern": "request.args.get(...)"
+            },
+            {
+              "pattern": "request.args[...]"
+            },
+            {
+              "pattern": "request.cookies.get(...)"
+            },
+            {
+              "pattern": "request.cookies[...]"
+            },
+            {
+              "pattern": "request.query_params.get(...)"
+            },
+            {
+              "pattern": "request.query_params[...]"
+            }
+          ],
+          "label": "REQUEST",
+          "exact": true
+        },
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$A + $B"
+                },
+                {
+                  "pattern": "f\"...{$A}{$B}...\""
+                }
+              ]
+            },
+            {
+              "pattern-not": "$A + $A"
+            },
+            {
+              "pattern-not": "f\"...{$A}{$A}...\""
+            },
+            {
+              "focus-metavariable": "$A"
+            },
+            {
+              "pattern-not": "$A + \"...\" + $B"
+            },
+            {
+              "pattern-not-regex": "\\+\\s*['\"]"
+            }
+          ],
+          "requires": "REQUEST and not FRAGMENT_HASH",
+          "label": "LEFT",
+          "exact": true
+        },
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$A + $B"
+                },
+                {
+                  "pattern": "f\"...{$A}{$B}...\""
+                }
+              ]
+            },
+            {
+              "pattern-not": "$A + $A"
+            },
+            {
+              "pattern-not": "f\"...{$A}{$A}...\""
+            },
+            {
+              "focus-metavariable": "$B"
+            },
+            {
+              "pattern-not": "$A + \"...\" + $B"
+            },
+            {
+              "pattern-not-regex": "\\+\\s*['\"]"
+            }
+          ],
+          "requires": "REQUEST and not FRAGMENT_HASH",
+          "label": "RIGHT",
+          "exact": true
+        },
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$A + $B"
+                },
+                {
+                  "pattern": "f\"...{$A}{$B}...\""
+                }
+              ]
+            },
+            {
+              "pattern-not": "$A + $A"
+            },
+            {
+              "pattern-not": "f\"...{$A}{$A}...\""
+            },
+            {
+              "pattern-not": "$A + \"...\" + $B"
+            },
+            {
+              "pattern-not-regex": "\\+\\s*['\"]"
+            }
+          ],
+          "requires": "LEFT and RIGHT and not FRAGMENT_HASH",
+          "label": "JOIN",
+          "exact": true
+        },
+        {
+          "pattern-either": [
+            {
+              "pattern": "hashlib.sha256($X).hexdigest()"
+            },
+            {
+              "pattern": "hashlib.sha256($X).digest()"
+            },
+            {
+              "pattern": "hashlib.md5($X).hexdigest()"
+            }
+          ],
+          "requires": "REQUEST and not JOIN",
+          "label": "FRAGMENT_HASH",
+          "exact": true
+        }
+      ],
+      "pattern-sanitizers": [
+        {
+          "pattern-either": [
+            {
+              "pattern": "json.dumps([...])"
+            },
+            {
+              "pattern": "json.dumps((...))"
+            },
+            {
+              "pattern": "f\"{len($A)}:{$A}{len($B)}:{$B}\""
+            }
+          ],
+          "exact": true
+        },
+        {
+          "pattern": "urllib.parse.quote($A, safe=\"\") + \"|\" + urllib.parse.quote($B, safe=\"\")",
+          "exact": true
+        }
+      ],
+      "pattern-sinks": [
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$CACHE.get($KEY, ...)"
+                },
+                {
+                  "pattern": "$CACHE.set($KEY, ...)"
+                },
+                {
+                  "pattern": "$CACHE.delete($KEY, ...)"
+                }
+              ]
+            },
+            {
+              "metavariable-regex": {
+                "metavariable": "$CACHE",
+                "regex": "(?i)^(.*cache.*|redis|memcached|client)$"
+              }
+            },
+            {
+              "focus-metavariable": "$KEY"
+            }
+          ],
+          "requires": "JOIN"
+        },
+        {
+          "patterns": [
+            {
+              "pattern-inside": "def $F(...):\n    ..."
+            },
+            {
+              "metavariable-regex": {
+                "metavariable": "$F",
+                "regex": "^(make_cache_key|cache_key|key_func)$"
+              }
+            },
+            {
+              "pattern": "return $KEY"
+            },
+            {
+              "focus-metavariable": "$KEY"
+            }
+          ],
+          "requires": "JOIN"
+        }
+      ]
+    },
+    {
+      "id": "cache-key-python-weak-delimiter",
+      "languages": [
+        "python"
+      ],
+      "mode": "taint",
+      "severity": "INFO",
+      "message": "Two request-derived operands reach a cache key through a weak separator. Static lead: verify distinct sources, variable lengths and sink use.",
+      "pattern-sources": [
+        {
+          "pattern-either": [
+            {
+              "pattern": "request.path"
+            },
+            {
+              "pattern": "request.full_path"
+            },
+            {
+              "pattern": "request.url.path"
+            },
+            {
+              "pattern": "request.headers.get(...)"
+            },
+            {
+              "pattern": "request.headers[...]"
+            },
+            {
+              "pattern": "request.GET.get(...)"
+            },
+            {
+              "pattern": "request.GET[...]"
+            },
+            {
+              "pattern": "request.args.get(...)"
+            },
+            {
+              "pattern": "request.args[...]"
+            },
+            {
+              "pattern": "request.cookies.get(...)"
+            },
+            {
+              "pattern": "request.cookies[...]"
+            },
+            {
+              "pattern": "request.query_params.get(...)"
+            },
+            {
+              "pattern": "request.query_params[...]"
+            }
+          ],
+          "label": "REQUEST",
+          "exact": true
+        },
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$A + \"|\" + $B"
+                },
+                {
+                  "pattern": "$A + \":\" + $B"
+                },
+                {
+                  "pattern": "$A + \"/\" + $B"
+                },
+                {
+                  "pattern": "$A + \"-\" + $B"
+                },
+                {
+                  "pattern": "f\"...{$A}|{$B}...\""
+                },
+                {
+                  "pattern": "f\"...{$A}:{$B}...\""
+                }
+              ]
+            },
+            {
+              "pattern-not": "$A + $A"
+            },
+            {
+              "pattern-not": "f\"...{$A}{$A}...\""
+            },
+            {
+              "pattern-not": "f\"...{$A}|{$A}...\""
+            },
+            {
+              "pattern-not": "$A + \"|\" + $A"
+            },
+            {
+              "focus-metavariable": "$A"
+            },
+            {
+              "pattern-not": "$A + \":\" + $A"
+            },
+            {
+              "pattern-not": "$A + \"/\" + $A"
+            },
+            {
+              "pattern-not": "$A + \"-\" + $A"
+            },
+            {
+              "pattern-not": "f\"...{$A}:{$A}...\""
+            }
+          ],
+          "requires": "REQUEST and not FRAGMENT_HASH",
+          "label": "LEFT",
+          "exact": true
+        },
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$A + \"|\" + $B"
+                },
+                {
+                  "pattern": "$A + \":\" + $B"
+                },
+                {
+                  "pattern": "$A + \"/\" + $B"
+                },
+                {
+                  "pattern": "$A + \"-\" + $B"
+                },
+                {
+                  "pattern": "f\"...{$A}|{$B}...\""
+                },
+                {
+                  "pattern": "f\"...{$A}:{$B}...\""
+                }
+              ]
+            },
+            {
+              "pattern-not": "$A + $A"
+            },
+            {
+              "pattern-not": "f\"...{$A}{$A}...\""
+            },
+            {
+              "pattern-not": "f\"...{$A}|{$A}...\""
+            },
+            {
+              "pattern-not": "$A + \"|\" + $A"
+            },
+            {
+              "focus-metavariable": "$B"
+            },
+            {
+              "pattern-not": "$A + \":\" + $A"
+            },
+            {
+              "pattern-not": "$A + \"/\" + $A"
+            },
+            {
+              "pattern-not": "$A + \"-\" + $A"
+            },
+            {
+              "pattern-not": "f\"...{$A}:{$A}...\""
+            }
+          ],
+          "requires": "REQUEST and not FRAGMENT_HASH",
+          "label": "RIGHT",
+          "exact": true
+        },
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$A + \"|\" + $B"
+                },
+                {
+                  "pattern": "$A + \":\" + $B"
+                },
+                {
+                  "pattern": "$A + \"/\" + $B"
+                },
+                {
+                  "pattern": "$A + \"-\" + $B"
+                },
+                {
+                  "pattern": "f\"...{$A}|{$B}...\""
+                },
+                {
+                  "pattern": "f\"...{$A}:{$B}...\""
+                }
+              ]
+            },
+            {
+              "pattern-not": "$A + $A"
+            },
+            {
+              "pattern-not": "f\"...{$A}{$A}...\""
+            },
+            {
+              "pattern-not": "f\"...{$A}|{$A}...\""
+            },
+            {
+              "pattern-not": "$A + \"|\" + $A"
+            },
+            {
+              "pattern-not": "$A + \":\" + $A"
+            },
+            {
+              "pattern-not": "$A + \"/\" + $A"
+            },
+            {
+              "pattern-not": "$A + \"-\" + $A"
+            },
+            {
+              "pattern-not": "f\"...{$A}:{$A}...\""
+            }
+          ],
+          "requires": "LEFT and RIGHT and not FRAGMENT_HASH",
+          "label": "JOIN",
+          "exact": true
+        },
+        {
+          "pattern-either": [
+            {
+              "pattern": "hashlib.sha256($X).hexdigest()"
+            },
+            {
+              "pattern": "hashlib.sha256($X).digest()"
+            },
+            {
+              "pattern": "hashlib.md5($X).hexdigest()"
+            }
+          ],
+          "requires": "REQUEST and not JOIN",
+          "label": "FRAGMENT_HASH",
+          "exact": true
+        }
+      ],
+      "pattern-sanitizers": [
+        {
+          "pattern-either": [
+            {
+              "pattern": "json.dumps([...])"
+            },
+            {
+              "pattern": "json.dumps((...))"
+            },
+            {
+              "pattern": "f\"{len($A)}:{$A}{len($B)}:{$B}\""
+            }
+          ],
+          "exact": true
+        },
+        {
+          "pattern": "urllib.parse.quote($A, safe=\"\") + \"|\" + urllib.parse.quote($B, safe=\"\")",
+          "exact": true
+        }
+      ],
+      "pattern-sinks": [
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$CACHE.get($KEY, ...)"
+                },
+                {
+                  "pattern": "$CACHE.set($KEY, ...)"
+                },
+                {
+                  "pattern": "$CACHE.delete($KEY, ...)"
+                }
+              ]
+            },
+            {
+              "metavariable-regex": {
+                "metavariable": "$CACHE",
+                "regex": "(?i)^(.*cache.*|redis|memcached|client)$"
+              }
+            },
+            {
+              "focus-metavariable": "$KEY"
+            }
+          ],
+          "requires": "JOIN"
+        },
+        {
+          "patterns": [
+            {
+              "pattern-inside": "def $F(...):\n    ..."
+            },
+            {
+              "metavariable-regex": {
+                "metavariable": "$F",
+                "regex": "^(make_cache_key|cache_key|key_func)$"
+              }
+            },
+            {
+              "pattern": "return $KEY"
+            },
+            {
+              "focus-metavariable": "$KEY"
+            }
+          ],
+          "requires": "JOIN"
+        }
+      ]
+    },
+    {
+      "id": "cache-key-js-no-delimiter",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "mode": "taint",
+      "severity": "WARNING",
+      "message": "Two request-derived operands reach a cache key through an unframed join. Static lead: verify distinct sources, variable lengths and sink use.",
+      "pattern-sources": [
+        {
+          "pattern-either": [
+            {
+              "pattern": "req.path"
+            },
+            {
+              "pattern": "req.url"
+            },
+            {
+              "pattern": "req.originalUrl"
+            },
+            {
+              "pattern": "req.headers[...]"
+            },
+            {
+              "pattern": "req.headers.$FIELD"
+            },
+            {
+              "pattern": "req.query[...]"
+            },
+            {
+              "pattern": "req.query.$FIELD"
+            },
+            {
+              "pattern": "req.cookies[...]"
+            },
+            {
+              "pattern": "req.cookies.$FIELD"
+            },
+            {
+              "pattern": "req.params.$FIELD"
+            },
+            {
+              "pattern": "ctx.request.url"
+            },
+            {
+              "pattern": "ctx.request.headers[...]"
+            },
+            {
+              "pattern": "ctx.query.$FIELD"
+            },
+            {
+              "pattern": "request.headers[...]"
+            },
+            {
+              "pattern": "request.query.$FIELD"
+            }
+          ],
+          "label": "REQUEST",
+          "exact": true
+        },
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$A + $B"
+                },
+                {
+                  "pattern": "`...${$A}${$B}...`"
+                }
+              ]
+            },
+            {
+              "pattern-not": "$A + $A"
+            },
+            {
+              "pattern-not": "`...${$A}${$A}...`"
+            },
+            {
+              "focus-metavariable": "$A"
+            },
+            {
+              "pattern-not": "$A + \"...\" + $B"
+            },
+            {
+              "pattern-not-regex": "\\+\\s*['\"]"
+            }
+          ],
+          "requires": "REQUEST and not FRAGMENT_HASH",
+          "label": "LEFT",
+          "exact": true
+        },
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$A + $B"
+                },
+                {
+                  "pattern": "`...${$A}${$B}...`"
+                }
+              ]
+            },
+            {
+              "pattern-not": "$A + $A"
+            },
+            {
+              "pattern-not": "`...${$A}${$A}...`"
+            },
+            {
+              "focus-metavariable": "$B"
+            },
+            {
+              "pattern-not": "$A + \"...\" + $B"
+            },
+            {
+              "pattern-not-regex": "\\+\\s*['\"]"
+            }
+          ],
+          "requires": "REQUEST and not FRAGMENT_HASH",
+          "label": "RIGHT",
+          "exact": true
+        },
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$A + $B"
+                },
+                {
+                  "pattern": "`...${$A}${$B}...`"
+                }
+              ]
+            },
+            {
+              "pattern-not": "$A + $A"
+            },
+            {
+              "pattern-not": "`...${$A}${$A}...`"
+            },
+            {
+              "pattern-not": "$A + \"...\" + $B"
+            },
+            {
+              "pattern-not-regex": "\\+\\s*['\"]"
+            }
+          ],
+          "requires": "LEFT and RIGHT and not FRAGMENT_HASH",
+          "label": "JOIN",
+          "exact": true
+        },
+        {
+          "pattern-either": [
+            {
+              "pattern": "crypto.createHash(\"sha256\").update($X).digest(\"hex\")"
+            }
+          ],
+          "requires": "REQUEST and not JOIN",
+          "label": "FRAGMENT_HASH",
+          "exact": true
+        }
+      ],
+      "pattern-sanitizers": [
+        {
+          "pattern": "JSON.stringify([...])",
+          "exact": true
+        },
+        {
+          "pattern": "encodeURIComponent($A) + \"|\" + encodeURIComponent($B)",
+          "exact": true
+        }
+      ],
+      "pattern-sinks": [
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$CACHE.get($KEY, ...)"
+                },
+                {
+                  "pattern": "$CACHE.set($KEY, ...)"
+                },
+                {
+                  "pattern": "$CACHE.delete($KEY, ...)"
+                }
+              ]
+            },
+            {
+              "metavariable-regex": {
+                "metavariable": "$CACHE",
+                "regex": "(?i)^(.*cache.*|redis|memcached|client)$"
+              }
+            },
+            {
+              "focus-metavariable": "$KEY"
+            }
+          ],
+          "requires": "JOIN"
+        },
+        {
+          "patterns": [
+            {
+              "pattern": "unstable_cache($FN, $KEY, ...)"
+            },
+            {
+              "focus-metavariable": "$KEY"
+            }
+          ],
+          "requires": "JOIN"
+        }
+      ]
+    },
+    {
+      "id": "cache-key-js-weak-delimiter",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "mode": "taint",
+      "severity": "INFO",
+      "message": "Two request-derived operands reach a cache key through a weak separator. Static lead: verify distinct sources, variable lengths and sink use.",
+      "pattern-sources": [
+        {
+          "pattern-either": [
+            {
+              "pattern": "req.path"
+            },
+            {
+              "pattern": "req.url"
+            },
+            {
+              "pattern": "req.originalUrl"
+            },
+            {
+              "pattern": "req.headers[...]"
+            },
+            {
+              "pattern": "req.headers.$FIELD"
+            },
+            {
+              "pattern": "req.query[...]"
+            },
+            {
+              "pattern": "req.query.$FIELD"
+            },
+            {
+              "pattern": "req.cookies[...]"
+            },
+            {
+              "pattern": "req.cookies.$FIELD"
+            },
+            {
+              "pattern": "req.params.$FIELD"
+            },
+            {
+              "pattern": "ctx.request.url"
+            },
+            {
+              "pattern": "ctx.request.headers[...]"
+            },
+            {
+              "pattern": "ctx.query.$FIELD"
+            },
+            {
+              "pattern": "request.headers[...]"
+            },
+            {
+              "pattern": "request.query.$FIELD"
+            }
+          ],
+          "label": "REQUEST",
+          "exact": true
+        },
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$A + \"|\" + $B"
+                },
+                {
+                  "pattern": "$A + \":\" + $B"
+                },
+                {
+                  "pattern": "$A + \"/\" + $B"
+                },
+                {
+                  "pattern": "$A + \"-\" + $B"
+                },
+                {
+                  "pattern": "`...${$A}|${$B}...`"
+                },
+                {
+                  "pattern": "`...${$A}:${$B}...`"
+                }
+              ]
+            },
+            {
+              "pattern-not": "$A + $A"
+            },
+            {
+              "pattern-not": "`...${$A}${$A}...`"
+            },
+            {
+              "pattern-not": "`...${$A}|${$A}...`"
+            },
+            {
+              "pattern-not": "$A + \"|\" + $A"
+            },
+            {
+              "focus-metavariable": "$A"
+            },
+            {
+              "pattern-not": "$A + \":\" + $A"
+            },
+            {
+              "pattern-not": "$A + \"/\" + $A"
+            },
+            {
+              "pattern-not": "$A + \"-\" + $A"
+            },
+            {
+              "pattern-not": "`...${$A}:${$A}...`"
+            }
+          ],
+          "requires": "REQUEST and not FRAGMENT_HASH",
+          "label": "LEFT",
+          "exact": true
+        },
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$A + \"|\" + $B"
+                },
+                {
+                  "pattern": "$A + \":\" + $B"
+                },
+                {
+                  "pattern": "$A + \"/\" + $B"
+                },
+                {
+                  "pattern": "$A + \"-\" + $B"
+                },
+                {
+                  "pattern": "`...${$A}|${$B}...`"
+                },
+                {
+                  "pattern": "`...${$A}:${$B}...`"
+                }
+              ]
+            },
+            {
+              "pattern-not": "$A + $A"
+            },
+            {
+              "pattern-not": "`...${$A}${$A}...`"
+            },
+            {
+              "pattern-not": "`...${$A}|${$A}...`"
+            },
+            {
+              "pattern-not": "$A + \"|\" + $A"
+            },
+            {
+              "focus-metavariable": "$B"
+            },
+            {
+              "pattern-not": "$A + \":\" + $A"
+            },
+            {
+              "pattern-not": "$A + \"/\" + $A"
+            },
+            {
+              "pattern-not": "$A + \"-\" + $A"
+            },
+            {
+              "pattern-not": "`...${$A}:${$A}...`"
+            }
+          ],
+          "requires": "REQUEST and not FRAGMENT_HASH",
+          "label": "RIGHT",
+          "exact": true
+        },
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$A + \"|\" + $B"
+                },
+                {
+                  "pattern": "$A + \":\" + $B"
+                },
+                {
+                  "pattern": "$A + \"/\" + $B"
+                },
+                {
+                  "pattern": "$A + \"-\" + $B"
+                },
+                {
+                  "pattern": "`...${$A}|${$B}...`"
+                },
+                {
+                  "pattern": "`...${$A}:${$B}...`"
+                }
+              ]
+            },
+            {
+              "pattern-not": "$A + $A"
+            },
+            {
+              "pattern-not": "`...${$A}${$A}...`"
+            },
+            {
+              "pattern-not": "`...${$A}|${$A}...`"
+            },
+            {
+              "pattern-not": "$A + \"|\" + $A"
+            },
+            {
+              "pattern-not": "$A + \":\" + $A"
+            },
+            {
+              "pattern-not": "$A + \"/\" + $A"
+            },
+            {
+              "pattern-not": "$A + \"-\" + $A"
+            },
+            {
+              "pattern-not": "`...${$A}:${$A}...`"
+            }
+          ],
+          "requires": "LEFT and RIGHT and not FRAGMENT_HASH",
+          "label": "JOIN",
+          "exact": true
+        },
+        {
+          "pattern-either": [
+            {
+              "pattern": "crypto.createHash(\"sha256\").update($X).digest(\"hex\")"
+            }
+          ],
+          "requires": "REQUEST and not JOIN",
+          "label": "FRAGMENT_HASH",
+          "exact": true
+        }
+      ],
+      "pattern-sanitizers": [
+        {
+          "pattern": "JSON.stringify([...])",
+          "exact": true
+        },
+        {
+          "pattern": "encodeURIComponent($A) + \"|\" + encodeURIComponent($B)",
+          "exact": true
+        }
+      ],
+      "pattern-sinks": [
+        {
+          "patterns": [
+            {
+              "pattern-either": [
+                {
+                  "pattern": "$CACHE.get($KEY, ...)"
+                },
+                {
+                  "pattern": "$CACHE.set($KEY, ...)"
+                },
+                {
+                  "pattern": "$CACHE.delete($KEY, ...)"
+                }
+              ]
+            },
+            {
+              "metavariable-regex": {
+                "metavariable": "$CACHE",
+                "regex": "(?i)^(.*cache.*|redis|memcached|client)$"
+              }
+            },
+            {
+              "focus-metavariable": "$KEY"
+            }
+          ],
+          "requires": "JOIN"
+        },
+        {
+          "patterns": [
+            {
+              "pattern": "unstable_cache($FN, $KEY, ...)"
+            },
+            {
+              "focus-metavariable": "$KEY"
+            }
+          ],
+          "requires": "JOIN"
+        }
+      ]
+    }
+  ]
+}
