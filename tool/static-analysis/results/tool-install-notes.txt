@@ -1,0 +1,7 @@
+Restricted pip/clone attempts failed with WinError 10013. Network-enabled execution used for installs and public clones.
+Unpinned pip was cancelled after dependency backtracking. Exact Semgrep install initially failed with MemoryError; compatible transitive constraints used. Large wheel downloads were resumed/range-fetched and checked against PyPI SHA256 before offline installation.
+Final executed tools: Python 3.14.6, Semgrep 1.180.0, Crossplane 0.5.8, pytest 8.3.3, PyYAML 6.0.3, CodeQL CLI 2.23.8, codeql/cpp-all 6.1.3.
+CodeQL databases for Nginx/Varnish/Apache created using build-mode=none, mostly partial due missing generated/platform/APR headers. Initial query compile failed twice with native-memory/paging-file errors; --ram=1024 raised to minimum2466. Sequential single-threaded queries and inventories ultimately ran successfully on all three databases.
+Full Apache clone failed with HTTP/2 CANCEL/early EOF; HTTP/1.1 sparse retry succeeded.
+Semgrep native config-file/directory-target discovery failed with IndexError; explicit per-file commands passed and CI uses those.
+Local pytest ran with PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 because globally installed pytest-asyncio requires a different pytest version. Existing tests: 3 passed; linter tests: 18 passed.

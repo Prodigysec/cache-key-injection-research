@@ -2,5 +2,5 @@
   "files": 13,
   "findings": [],
   "parse_errors": [],
-  "note": "Nginx and VCL linters actually ran on all 13 files; Semgrep pending."
+  "note": "Both configuration linters ran on all 13 files. Final Semgrep ran successfully with zero eligible Python/JS/TS targets; see corpus-scan.json."
 }

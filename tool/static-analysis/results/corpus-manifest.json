@@ -123,6 +123,10 @@
     {
       "repo": "magento/magento2",
       "error": "incomplete GitHub response after retries"
+    },
+    {
+      "search": "proxy_cache_key extension:conf",
+      "error": "HTTP Error 401: Unauthorized"
     }
   ]
 }

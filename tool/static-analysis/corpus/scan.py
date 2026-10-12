@@ -1,6 +1,7 @@
 import argparse
 import json
 import subprocess
+import shutil
 import sys
 from collections import Counter
 from pathlib import Path
@@ -14,7 +15,7 @@ def main():
     p.add_argument('corpus', type=Path)
     p.add_argument('--output', type=Path, required=True)
     args = p.parse_args()
-    manifest = json.loads((args.corpus / 'manifest.json').read_text())
+    manifest = json.loads((args.corpus / 'manifest.json').read_text(encoding='utf-8'))
     findings, errors = [], []
     for item in manifest['files']:
         try:
@@ -22,7 +23,7 @@ def main():
             findings += [{**f, 'source': item['source'], 'corpus_file': item['file']} for f in results]
         except (ValueError, OSError, SyntaxError) as error:
             errors.append({'source': item['source'], 'error': str(error)})
-    command = [sys.executable, '-m', 'semgrep', '--metrics=off', '--disable-version-check', '--config',
+    command = [shutil.which('semgrep') or 'semgrep', '--metrics=off', '--disable-version-check', '--config',
                str(Path(__file__).resolve().parents[1] / 'semgrep-rules.yml'), '--json', str(args.corpus)]
     semgrep = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
     try:

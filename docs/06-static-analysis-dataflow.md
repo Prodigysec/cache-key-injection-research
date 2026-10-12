@@ -6,7 +6,7 @@ tracing the actual data flow, in source, from request-derived values to
 the string (or hash input) that becomes the cache key. The payoff:
 
 - Black-box fuzzing proves a collision *exists* for the pairs you thought
-  to test. Source-level tracing shows *every* place a given codebase
+  to test. Source-level tracing can identify places a given codebase
   concatenates two or more variable-length tainted fragments without a
   delimiter — including pairs you'd never have guessed to fuzz.
 - It generalizes the "ambiguous concatenation before hashing" insight from
@@ -52,10 +52,9 @@ that separator character itself (or an encoded form of it that gets
 decoded before hashing). E.g. `path + "|" + accept` is still exploitable
 if `path` can itself contain a literal `|` (most URL path segments allow
 arbitrary bytes once percent-decoded) — the attacker just needs to also
-control the fixed point, i.e. place their own `|` inside the path to
-re-simulate the boundary. A thorough static check should flag:
+control the fixed point. This is a conservative lead, not a sufficient proof: separator occurrence in only one source can still permit an unambiguous first/last-separator split. A thorough static check should flag:
 
-- No separator at all → confirmed unsafe (the article's finding).
+- No separator at all → confirmed unframed construction; collision feasibility still needs source/control and length review. Fixed lengths, constrained alphabets and dependent sources can prevent collisions.
 - A separator drawn from a charset either source can contain → likely
   still unsafe, flag for manual review.
 - A separator that's structurally impossible for either source to
@@ -84,26 +83,16 @@ as the baseline/reference implementation before tackling the harder
 ecosystems below; the scoring logic (separator strength, above) belongs
 here too.
 
-### Varnish VCL (`hash_data()` in `vcl_hash`)
+### Varnish VCL (upstream Varnish, not Fastly)
 
-Also a DSL, but with actual control flow (`if`/`else`, subroutine calls),
-so a simple string-split isn't enough — `hash_data()` can be called
-multiple times, conditionally, across multiple subroutines. Approach:
+Verified against commit [0038dd1](https://github.com/varnishcache/varnish-cache/tree/0038dd19804fd92cd8bd4bfe92e5a515a57d5e8e).
+[`VRT_hashdata`](https://github.com/varnishcache/varnish-cache/blob/0038dd19804fd92cd8bd4bfe92e5a515a57d5e8e/bin/varnishd/cache/cache_vrt.c#L723) feeds each strand into the hash, then invokes `HSH_AddString(..., NULL)`.
+[`HSH_AddString`](https://github.com/varnishcache/varnish-cache/blob/0038dd19804fd92cd8bd4bfe92e5a515a57d5e8e/bin/varnishd/cache/cache_hash.c#L216) appends an internal separator byte on that NULL call.
+Thus `hash_data(req.url); hash_data(req.http.host);` preserves the call boundary; the old claim that this idiom needs an extra literal call was wrong. A literal call can add data but is unnecessary for call framing. Within one call, `hash_data(req.url + req.http.Accept)` still joins strands before the call's final separator.
 
-1. Parse the VCL with a real grammar (there's no mature off-the-shelf
-   VCL parser; `libvcl`'s own grammar or a hand-rolled recursive-descent
-   parser over the (small) VCL grammar is feasible for just the subset
-   needed: `sub`, `if`, `hash_data(expr)`, variable references).
-2. Build a simple intraprocedural CFG per subroutine, track which
-   `hash_data()` calls are reachable on which branches, and for each
-   reachable *sequence* of calls on a given path, apply the same
-   separator-strength check as the Nginx case — but now across multiple
-   `hash_data()` call sites, not just concatenated string literals.
-3. Watch especially for `hash_data(req.url)` followed/preceded by
-   `hash_data(req.http.SOME-HEADER)` with no `hash_data(":")` (or similar
-   literal) call in between — the idiomatic safe pattern inserts a
-   literal-string `hash_data()` call as a separator, and it's extremely
-   common for real-world VCL to skip it.
+The bounded subset parser in `tool/static-analysis/vcl_keylint/` handles subroutines, if/elsif/else, call, return and string/variable strands. It explores both branches without proving conditions satisfiable, caps paths, and reports unsupported reachable statements as UNKNOWN. It does not parse the entire VCL language or track set-variable provenance. Separate calls are never flagged as raw-concatenation bugs.
+
+[Upstream hashing documentation](https://github.com/varnishcache/varnish-cache/blob/0038dd19804fd92cd8bd4bfe92e5a515a57d5e8e/doc/sphinx/users-guide/vcl-hashing.rst) states that builtin URL and Host/server-IP hashing follows user code on fallthrough; `return(lookup)` stops that append. The builtin implementation itself uses framed calls. This version-specific source review is not a runtime collision reproduction.
 
 ### Apache (`mod_cache`, `mod_cache_disk`) and other C-based proxies
 
@@ -113,7 +102,8 @@ interprocedural taint tracking:
 - **CodeQL** (C/C++ query pack) — define a source query for request
   field accessors (`apr_table_get(r->headers_in, ...)`, `r->uri`,
   `r->parsed_uri.query`), a sink query for the cache-key construction
-  functions (`cache_generate_key` and friends in `mod_cache`'s source),
+  functions (the optional `ap_cache_generate_key` hook and its default
+  `cache_generate_key_default`),
   and a taint-tracking query connecting them through `apr_pstrcat`/
   `apr_psprintf`/string concatenation calls with no intervening literal.
 - Alternative: **Joern** (works well for C, has a good dataflow query
@@ -123,6 +113,8 @@ interprocedural taint tracking:
   (not just a misconfiguration) would be a disclosure to the Apache
   project, not just a single bug bounty target.
 
+At inspected Apache commit [9e1473f](https://github.com/apache/httpd/tree/9e1473f2c6143401cc4ade0a5188966532ac30e8), the default lives in [cache_storage.c](https://github.com/apache/httpd/blob/9e1473f2c6143401cc4ade0a5188966532ac30e8/modules/cache/cache_storage.c#L666), not cache_util.c. It delegates to `cache_canonicalise_key`, whose final assembly includes `://`, formatted port material and `?`. [mod_cache.c](https://github.com/apache/httpd/blob/9e1473f2c6143401cc4ade0a5188966532ac30e8/modules/cache/mod_cache.c#L2517) selects the default when no optional hook is registered. These are real key paths; source inspection alone does not prove a collision.
+
 ### CDN "custom cache key" UIs (Cloudflare Cache Rules, Fastly, CloudFront)
 
 Closed source — no static analysis possible on the platform's own
@@ -130,8 +122,7 @@ implementation. The practical approach here is still black-box (Track D
 in the roadmap): configure a custom key with 2+ components on your own
 account and observe behavior, since you can't read Cloudflare's/AWS's
 source. If a platform's custom-key feature uses **VCL under the hood**
-(Fastly does), treat it as the Varnish VCL case above, applied to the
-VCL Fastly generates/exposes for your service.
+(Fastly does), inspect its own documented semantics. Fastly uses [req.hash](https://www.fastly.com/documentation/reference/vcl/variables/cache-object/req-hash/) and [vcl_hash](https://www.fastly.com/documentation/reference/vcl/subroutines/hash/); do not transfer upstream Varnish VRT_hashdata framing assumptions to it. Fastly is outside the current linter coverage.
 
 ### App-level caches and GraphQL/API gateway caches (Python/JS/Java/Ruby/Go)
 
@@ -157,13 +148,7 @@ cross authorization boundaries, not just poison an HTTP response).
   modeled.
 - GraphQL specifically: trace from `variables` (the source, since
   persisted-query caching keys on `(query_id, variables)`) through
-  whatever serializes `variables` into the cache key — JSON-encoding is
-  safe (structurally escapes boundaries), but a naive
-  `queryId + JSON.stringify(variables)` *can* still collide if
-  `JSON.stringify` output for one variable set is a prefix of another's
-  concatenated result and `queryId` boundaries aren't separately fixed
-  length — check this case specifically, it's a plausible real bug no
-  one's published yet.
+  whatever serializes `variables` into the cache key — JSON-encoding the complete tuple/list of fragments preserves boundaries. Encoding variables alone does not establish how the complete key is framed, but it also does not prove a collision. The former GraphQL pattern matched any query ID plus JSON without request-flow evidence; it was speculative and is not treated as a confirmed finding.
 
 ## What to do with a finding
 
@@ -205,3 +190,9 @@ a lab scenario around it):
    to run against any source-available bug bounty target you're already
    looking at — treat this as a lightweight addition to recon, not a
    separate project phase.
+
+## Verified execution status
+
+See `07-corpus-scan-results.md` and `tool/static-analysis/results/` for measured outputs, pinned revisions and limitations. Nginx docs specify [`$scheme$proxy_host$request_uri`](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_cache_key), close to `$scheme$proxy_host$uri$is_args$args`. The lab uses customized request-host/header variants; do not conflate them with the built-in key. The [core hash input](https://github.com/nginx/nginx/blob/2b5c2b605b5df669da5dec6749dcc76c07d1315d/src/http/ngx_http_file_cache.c#L228) iterates key buffers with MD5 updates; hashing alone adds no fragment framing.
+
+A bare pipe separator in docs/01 is not a generally sufficient remediation. Use structural encoding of the complete tuple, fixed-width per-fragment digests, or escaping tied to a separator excluded by the encoded alphabet. Percent-quoting alone followed by undelimited concatenation is still ambiguous.

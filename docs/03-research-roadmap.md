@@ -132,8 +132,7 @@ The article's Cloudflare section is a single bypass trick
 - [ ] **VCL / Nginx config static analyzer** — for whitebox engagements
       or source-available targets, a simple linter that flags
       `proxy_cache_key` / `hash_data()` patterns concatenating 2+
-      variable-length fragments without a separator. High signal, zero
-      false-negatives-by-construction, much cheaper than black-box fuzzing
+      variable-length fragments without a separator. Coverage and precision require measurement; cheaper than black-box fuzzing
       when you have the config. See Track F below — this is the starting
       point for a fuller dataflow-based version of the same idea.
 
@@ -182,3 +181,7 @@ Semgrep rule set live in `docs/06-static-analysis-dataflow.md` and
    find-rate per hour of effort with no live target required at all.
 4. Use `docs/04-testing-methodology.md` before touching anything live,
    and `docs/05-findings-template.md` once you have something to report.
+
+## Static-analysis implementation update (2026-10-12)
+
+Track E has parser-backed Nginx boundary linting and a bounded upstream-Varnish subset interpreter with tests. Track F execution and corpus measurements are recorded in docs/07. Upstream Varnish hash_data calls are internally framed: separate calls are not the unsafe adjacency claimed in the earlier roadmap. Config findings remain leads; include expansion, source correlations, middleware semantics and complete C extraction remain coverage limits. Track C impact escalation still needs a demonstrated collision and authorization-boundary effect.
