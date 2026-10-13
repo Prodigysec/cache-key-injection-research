@@ -24,7 +24,7 @@ extends it with:
 - A white-box complement to the above: source-level taint tracing of
   cache key construction (sources → unsafe concatenation → sink) across
   Nginx, Varnish VCL, Apache `mod_cache`, and app-level/GraphQL caches,
-  with a starter Semgrep rule set (`docs/06-static-analysis-dataflow.md`,
+  with tested Python/JS/TS Semgrep rules and parser-backed config linters (`docs/06-static-analysis-dataflow.md`,
   `tool/static-analysis/`).
 - A findings template and testing methodology for turning a lab result into
   a reportable bug bounty submission.
@@ -114,3 +114,7 @@ https://www.yeswehack.com/lab/research-cache-key-injection
 ## License
 
 MIT for all code in this repo (`lab/`, `tool/`, `tests/`). See `LICENSE`.
+
+## Static-analysis execution results
+
+The static-analysis branch adds pinned tools, native Semgrep fixtures, Nginx/VCL linters and executed CodeQL models. [The measured report](docs/07-corpus-scan-results.md) separates successful tests from corpus/authentication, C extraction and Docker limitations. Zero static results are not proof that a component is safe.

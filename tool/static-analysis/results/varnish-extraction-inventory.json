@@ -1,0 +1,27 @@
+{
+  "#select": {
+    "columns": [
+      {
+        "kind": "String"
+      },
+      {
+        "kind": "String"
+      },
+      {
+        "kind": "Integer"
+      }
+    ],
+    "tuples": [
+      [
+        "bin/varnishd/cache/cache_hash.c",
+        "HSH_AddString",
+        3
+      ],
+      [
+        "bin/varnishd/cache/cache_vrt.c",
+        "VRT_hashdata",
+        2
+      ]
+    ]
+  }
+}

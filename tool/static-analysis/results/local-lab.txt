@@ -1,0 +1,11 @@
+Local existing Docker lab, Nginx 1.27.5. No rebuild/config edits.
+Initial /fuzz attempt: all 404/MISS, no collision; running backend lacks route.
+Existing /anyendpoint scenario rerun with fresh nonce:
+GET /anyendpoint; Accept: static-68f24f93c6154af694e50a4a8c0723cf -> 200, dummy endpoint ok
+GET /anyend; Accept: pointstatic-68f24f93c6154af694e50a4a8c0723cf -> 200, dummy endpoint ok
+GET /anyend; Accept: pointcontrol-b76f4561e5d547129ede3b106dbf600a -> 404, Flask Not Found
+X-Debug-Key: scheme=http proxy_host=backend_upstream uri=/anyendpoint is_args= args= accept=static-68f24f93c6154af694e50a4a8c0723cf
+X-Debug-Key: scheme=http proxy_host=backend_upstream uri=/anyend is_args= args= accept=pointstatic-68f24f93c6154af694e50a4a8c0723cf
+Both key expressions concatenate to the same string. X-Cache absent on all responses.
+collision: True uncached_control_is_404: True
+Final response/body/control assertion exit 0. Initial helper demanded X-Cache=HIT and exited 1 despite response equality; no HIT header or backend trace is claimed.

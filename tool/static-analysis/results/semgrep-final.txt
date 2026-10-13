@@ -1,0 +1,11 @@
+Semgrep 1.180.0
+Native test command, once per py/js/ts fixture:
+semgrep --test --config tool/static-analysis/semgrep-rules.yml tool/static-analysis/fixtures/native/semgrep-rules.<extension>
+Python: 2/2: ✓ All tests passed
+JavaScript: 2/2: ✓ All tests passed
+TypeScript: 2/2: ✓ All tests passed
+No tests for fixes found.
+Each command exited 0. 23 expected finding locations and 22 negative statements across the three fixture files.
+
+An initial native directory-target command failed in Semgrep test.py relatively_eq with IndexError: tuple index out of range. Explicit config/fixture file pairing avoids it.
+Initial Python taint draft falsely flagged the weak-pipe and per-fragment-hash cases. Operand-focused labels, separator filtering and a fragment-hash guard fixed those actual mismatches; all native fixtures then passed.

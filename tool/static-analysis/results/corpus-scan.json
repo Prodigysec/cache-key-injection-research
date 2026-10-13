@@ -1,0 +1,50 @@
+{
+  "files": 13,
+  "by_kind": {
+    "nginx": 10,
+    "vcl": 3
+  },
+  "collection_errors": [
+    {
+      "repo": "magento/magento2",
+      "error": "incomplete GitHub response after retries"
+    },
+    {
+      "search": "proxy_cache_key extension:conf",
+      "error": "HTTP Error 401: Unauthorized"
+    }
+  ],
+  "parse_errors": [],
+  "boundary_counts": {},
+  "findings": [],
+  "semgrep": {
+    "exit_code": 0,
+    "output": {
+      "version": "1.180.0",
+      "results": [],
+      "errors": [],
+      "paths": {
+        "scanned": []
+      },
+      "time": {
+        "rules": [],
+        "rules_parse_time": 0.04422926902770996,
+        "profiling_times": {
+          "config_time": 1.140026569366455,
+          "core_time": 0.9686167240142822,
+          "ignores_time": 0.00007486343383789062,
+          "total_time": 2.250609874725342
+        },
+        "fixpoint_timeouts": [],
+        "targets": [],
+        "total_bytes": 0,
+        "max_memory_bytes": 74751616
+      },
+      "engine_requested": "OSS",
+      "skipped_rules": [],
+      "profiling_results": []
+    },
+    "stderr": "               \n               \n┌─────────────┐\n│ Scan Status │\n└─────────────┘\n  Scanning 15 files tracked by git with 4 Code rules:\n  Nothing to scan.\n                \n                \n┌──────────────┐\n│ Scan Summary │\n└──────────────┘\n✅ Scan completed successfully.\n • Findings: 0 (0 blocking)\n • Rules run: 4\n • Targets scanned: 0\n • Parsed lines: an unknown percentage\n • No ignore information available\nRan 4 rules on 0 files: 0 findings.\n"
+  },
+  "note": "Config corpus has no Python/JS/TS; zero Semgrep coverage is not precision evidence."
+}

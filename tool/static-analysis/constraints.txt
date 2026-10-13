@@ -1,0 +1,4 @@
+opentelemetry-instrumentation-requests==0.58b0
+opentelemetry-instrumentation-threading==0.58b0
+pydantic==2.12.5
+pydantic-settings==2.12.0

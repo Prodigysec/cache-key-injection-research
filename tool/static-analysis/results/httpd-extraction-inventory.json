@@ -1,0 +1,27 @@
+{
+  "#select": {
+    "columns": [
+      {
+        "kind": "String"
+      },
+      {
+        "kind": "String"
+      },
+      {
+        "kind": "Integer"
+      }
+    ],
+    "tuples": [
+      [
+        "modules/cache/cache_storage.c",
+        "cache_generate_key_default",
+        3
+      ],
+      [
+        "modules/cache/cache_storage.c",
+        "cache_canonicalise_key",
+        6
+      ]
+    ]
+  }
+}

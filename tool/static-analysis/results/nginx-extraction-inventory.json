@@ -1,0 +1,22 @@
+{
+  "#select": {
+    "columns": [
+      {
+        "kind": "String"
+      },
+      {
+        "kind": "String"
+      },
+      {
+        "kind": "Integer"
+      }
+    ],
+    "tuples": [
+      [
+        "src/http/ngx_http_file_cache.c",
+        "ngx_http_file_cache_create_key",
+        1
+      ]
+    ]
+  }
+}

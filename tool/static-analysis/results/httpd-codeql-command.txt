@@ -1,0 +1,6 @@
+Command: codeql database analyze .research-databases/httpd tool/static-analysis/codeql/request-to-cache-key.ql tool/static-analysis/codeql/ambiguous-cache-concat.ql --format=sarifv2.1.0 --output=httpd-results.sarif --threads=1 --ram=2466
+Both queries found in compilation cache.
+[1/2 eval 50.4s] Evaluation done; writing results to ambiguous-cache-concat.bqrs
+[2/2 eval 4s] Evaluation done; writing results to request-to-cache-key.bqrs
+Exported results to SARIF v2.1.0 (669ms)
+Exit code: 0. Parsed SARIF: 0 results.
