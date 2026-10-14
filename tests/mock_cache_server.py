@@ -2,10 +2,17 @@
 A tiny in-process stand-in for the Nginx lab, used to unit-test
 ckinject's probing logic without needing Docker. Two modes:
 
-- vulnerable=True:  key = ckbuster + path + Accept        (ambiguous, like
+- vulnerable=True:  key = buster + path + Accept        (ambiguous, like
                     the article's "$scheme$proxy_host$uri...$http_accept")
-- vulnerable=False: key = ckbuster + "|" + path + "|" + Accept  (delimited,
+- vulnerable=False: key = buster + "|" + path + "|" + Accept  (delimited,
                     the recommended fix)
+
+The buster is read from the X-Ckinject-Buster header, matching
+tool/ckinject/prober.py's real behavior (it moved there from a query
+parameter -- see that module's comment for why a query-param buster
+breaks this exact test for a path<->header pair). It's folded into both
+modes' keys purely to give each probe iteration its own isolated cache
+entry here, the same role it plays in the real lab.
 
 This is test scaffolding only, not a realistic cache implementation.
 """
@@ -22,12 +29,12 @@ def make_app(vulnerable: bool) -> Flask:
     def catch_all(path):
         full_path = "/" + path
         accept = request.headers.get("Accept", "")
-        ckbuster = request.args.get("ckbuster", "")
+        buster = request.headers.get("X-Ckinject-Buster", "")
 
         if vulnerable:
-            key = ckbuster + full_path + accept
+            key = buster + full_path + accept
         else:
-            key = ckbuster + "|" + full_path + "|" + accept
+            key = buster + "|" + full_path + "|" + accept
 
         if key in cache:
             resp = app.response_class(cache[key], status=200)

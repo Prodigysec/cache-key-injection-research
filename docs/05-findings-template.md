@@ -50,16 +50,18 @@ Cache scope: (CDN-wide edge cache / single origin instance / per-region?)
 
 ### Step 1 — Baseline request
 ```
-GET /<path>?ckbuster=<id> HTTP/1.1
+GET /<path> HTTP/1.1
 Host: <host>
+X-<yourname>-Buster: <id>
 <relevant headers>
 ```
 Response: `<status>`, `X-Cache: MISS`, body: `<summary>`
 
 ### Step 2 — Colliding request
 ```
-GET /<shifted-path>?ckbuster=<id> HTTP/1.1
+GET /<shifted-path> HTTP/1.1
 Host: <host>
+X-<yourname>-Buster: <id>
 <shifted headers>
 ```
 Response: `<status>`, `X-Cache: HIT`, body: `<summary — should match step 1

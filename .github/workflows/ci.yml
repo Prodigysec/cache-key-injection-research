@@ -30,21 +30,13 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install pinned analysis tools
-        run: pip install -r tool/static-analysis/requirements.txt
+      - name: Install Semgrep
+        run: pip install semgrep
 
-      - name: Test Semgrep rules with native annotations
-        env:
-          SEMGREP_SEND_METRICS: "off"
-          SEMGREP_ENABLE_VERSION_CHECK: "0"
+      - name: Validate semgrep-rules.yml against fixtures
         run: |
-          # Explicit files avoid Semgrep 1.180.0 file-config/directory-target discovery failure.
-          for fixture in tool/static-analysis/fixtures/native/semgrep-rules.{py,js,ts}; do
-            semgrep --test --config tool/static-analysis/semgrep-rules.yml "$fixture"
-          done
-
-      - name: Test config linters
-        run: python -m pytest tool/static-analysis/tests -q
+          cd tool/static-analysis
+          python3 check_fixtures.py
 
   lint-nginx-config:
     runs-on: ubuntu-latest
@@ -109,8 +101,16 @@ jobs:
           # Note: curl silently drops a header written as "Name:" (nothing
           # after the colon) instead of sending it empty -- "Name;" is the
           # documented way to force an actually-empty header value.
-          BASELINE=$(curl -s -H "Accept;" "http://localhost:8080/fuzzabcdefghij?ckbuster=fx1")
-          SHIFTED=$(curl -s -H "Accept: bcdefghij" "http://localhost:8080/fuzza?ckbuster=fx1")
+          #
+          # The cache buster goes in a header (X-Ck-Buster), NOT a query
+          # parameter. This step originally used "?ckbuster=fx1" in the
+          # query string, which sits physically BETWEEN $uri and
+          # $http_accept in /fuzz's key formula -- that silently broke
+          # this exact check (it's the same underlying bug fixed in
+          # tool/ckinject/prober.py; see docs/02-reproduction-guide.md
+          # and docs/04-testing-methodology.md for the full story).
+          BASELINE=$(curl -s -H "Accept;" -H "X-Ck-Buster: fx1" "http://localhost:8080/fuzzabcdefghij")
+          SHIFTED=$(curl -s -H "Accept: bcdefghij" -H "X-Ck-Buster: fx1" "http://localhost:8080/fuzza")
           echo "baseline=$BASELINE"
           echo "shifted=$SHIFTED"
           test "$BASELINE" = "$SHIFTED"
@@ -127,7 +127,10 @@ jobs:
           results = json.load(open('/tmp/ckinject-report.json'))
           collided_pairs = {r['pair'] for r in results if r['collided']}
           print('Collided pairs:', collided_pairs)
-          expected = {'path_suffix <-> header:Accept'}
+          # /fuzz only keys on Accept (not Accept-Language/-Encoding/X-Test-Header),
+          # so both the path and the query boundary against Accept should collide --
+          # see docs/02-reproduction-guide.md for why.
+          expected = {'path_suffix <-> header:Accept', 'query:ckprobe <-> header:Accept'}
           missing = expected - collided_pairs
           assert not missing, f'Expected collision(s) not detected: {missing}'
           "

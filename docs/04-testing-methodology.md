@@ -12,10 +12,20 @@ infrastructure you own. Nothing here authorizes testing third parties.
 
 ## Blast-radius discipline
 
-1. **Always use a cache buster.** Append a unique, high-entropy query
-   parameter (`?ckbuster=<random>`) to every probe request so you create
-   and observe your own isolated cache entry instead of touching one real
-   users might hit. Never omit this "just to check quickly."
+1. **Always use a cache buster — but put it in a header, not a query
+   parameter, when you're testing a path↔header boundary.** The point of
+   a buster is to isolate your test from real traffic, but a query-string
+   buster becomes a third, uncontrolled fragment in the key — and in a
+   very common key formula (anything keying on the full request URI, or
+   on `$is_args$args` the way this repo's lab does), that fragment sits
+   physically *between* the path and the header you're trying to collide.
+   That silently breaks the exact boundary-shift test you're running,
+   without any error — you'll just see "no collision" and have no idea
+   it's an artifact of your own cache buster rather than a confirmed
+   negative. (This bit `tool/ckinject` itself during development — see
+   its changelog/commit history. Use a header like `X-<yourname>-Buster`
+   with a random value instead; a query-param buster is still fine when
+   you aren't testing a path- or query-adjacent-to-header pair.)
 2. **Prefer low-traffic, low-sensitivity endpoints for initial probing.**
    Dummy/test endpoints, 404 pages, or a path you know is rarely hit are
    safer first targets than the homepage or a sensitive page.
@@ -62,15 +72,22 @@ tail and a header value, or scheme and Host):
 
 ```
 Baseline:
-  GET /anyendpoint?ckbuster=R1 HTTP/1.1
+  GET /anyendpoint HTTP/1.1
   Host: target.com
+  X-Ck-Buster: R1
   X-Test-Header: 123
 
 Shifted:
-  GET /anyend?ckbuster=R1 HTTP/1.1          <- same cache buster value R1
+  GET /anyend HTTP/1.1          <- same buster value R1, same header slot
   Host: target.com
+  X-Ck-Buster: R1
   X-Test-Header: point123
 ```
+
+(Buster in a header, not `?ckbuster=R1` in the query string — see point 1
+above. A query-string buster here would sit between the URI and
+`X-Test-Header` in a key formula like the one in this repo's lab, and
+would silently invalidate this exact test.)
 
 If the shifted request returns the baseline's cached response (same
 cache buster, same content), the cache concatenates those two fragments

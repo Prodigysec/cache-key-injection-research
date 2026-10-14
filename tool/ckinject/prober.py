@@ -55,8 +55,19 @@ def _build_request(base_url: str, base_path: str) -> dict:
 
 
 def _send(session: requests.Session, base_url: str, req: dict, timeout: float, verify: bool, cache_buster: str) -> requests.Response:
-    params = dict(req["params"])
-    params.setdefault("ckbuster", cache_buster)
+    # The cache buster goes in a header, NOT a query parameter. A query
+    # param sits in $is_args/$args, which in a very common key formula
+    # (Nginx's own default-ish "$scheme$host$request_uri", or this lab's
+    # "$uri$is_args$args$http_accept") lands physically BETWEEN the path
+    # and the next header fragment. That silently breaks the exact
+    # boundary-shift collision this probe is trying to detect for any
+    # path<->header pair -- the buster itself becomes an uncontrolled
+    # third fragment sitting in the gap. A header has no such universal
+    # position in cache key formulas, so it's the safer default. The
+    # header name is deliberately obscure/tool-specific so it's very
+    # unlikely to coincide with anything a real target actually keys on.
+    headers = dict(req["headers"])
+    headers.setdefault("X-Ckinject-Buster", cache_buster)
     path = req["path"]
     if not path.startswith("/"):
         # Guards against a bare "" or a no-leading-slash base_path (from
@@ -65,7 +76,7 @@ def _send(session: requests.Session, base_url: str, req: dict, timeout: float, v
         # requests/urllib3 can't parse as a URL.
         path = "/" + path
     url = base_url.rstrip("/") + path
-    return session.get(url, headers=req["headers"], params=params, timeout=timeout, verify=verify, allow_redirects=False)
+    return session.get(url, headers=headers, params=req["params"], timeout=timeout, verify=verify, allow_redirects=False)
 
 
 def probe_pair(

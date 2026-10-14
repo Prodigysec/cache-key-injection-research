@@ -151,14 +151,24 @@ cd ../tool
 python -m ckinject.cli probe --target http://localhost:8080 --base-path /fuzz
 ```
 
-You should see collisions reported for `path_suffix <-> header:Accept`,
-`<-> header:Accept-Language`, `<-> header:Accept-Encoding`, and
-`<-> header:X-Test-Header` (all four share the same ambiguous key as the
-named scenarios), but not for `query:ckprobe <-> header:Accept` (query
-parameters aren't part of this key formula, since `$is_args$args` only
-contributes when a query string is present at all — `ckinject` sends one,
-but the *position* of a query string in the concatenated key isn't
-ambiguous with a header the way two adjacent string fragments are).
+You should see collisions reported for `path_suffix <-> header:Accept`
+and `query:ckprobe <-> header:Accept` — `/fuzz`'s key is
+`$scheme$proxy_host$uri$is_args$args$http_accept`, and both the URI and
+the query string sit directly adjacent to `$http_accept` with nothing
+else keyed in between, so both boundaries are ambiguous. You should
+**not** see collisions for `<-> header:Accept-Language`,
+`<-> header:Accept-Encoding`, or `<-> header:X-Test-Header` — this key
+formula only keys on `Accept`, so those headers simply aren't part of the
+key at all and have nothing to collide with, regardless of boundary
+position.
+
+(An earlier version of this doc claimed `query:ckprobe <-> header:Accept`
+could never collide here. That was wrong — it was a side effect of a bug
+in `ckinject` itself, now fixed: the tool used to put its own
+cache-buster in a query parameter, which landed physically between `$uri`
+and `$http_accept` in this exact key formula and silently broke the
+boundary test for *any* path-or-query-adjacent-to-header pair. The buster
+now lives in a header instead, which this formula doesn't key on.)
 
 ## Cleanup
 
