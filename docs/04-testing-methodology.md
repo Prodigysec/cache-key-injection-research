@@ -53,17 +53,47 @@ doesn't apply.
 
 ### 2. Enumerate candidate keyed fragments
 
-Check the `Vary` header — every field it lists is (at minimum) a strong
-candidate for being part of the key. Also test common candidates even
-when absent from `Vary` (some implementations key without declaring
-`Vary`): `Accept`, `Accept-Language`, `Accept-Encoding`, `Host`, scheme,
-any app-specific cookie that visibly changes content (language, A/B test,
-currency, theme).
+**There's no surefire way to find every fragment a cache keys on.** The
+candidate space (every possible header, every cookie name, every query
+param) is technically unbounded, so black-box testing can only confirm
+or rule out what you thought to test — never prove you found everything.
+What follows is a systematic process that gets you close, not a complete
+algorithm.
 
-For each candidate, confirm it's actually keyed: send two requests
-differing only in that field, with a cache buster, and check whether you
-get two separate cache entries (two first-hit `MISS` + distinct bodies) or
-the same entry.
+Check the `Vary` header first — every field it lists is (at minimum) a
+strong candidate for being part of the key, though it's neither necessary
+(some caches key without declaring `Vary`) nor sufficient (some CDN edge
+caches ignore the origin's `Vary` entirely and key on their own rules).
+
+For each candidate — `Accept`, `Accept-Language`, `Accept-Encoding`,
+`Host`, scheme, any app-specific cookie that visibly changes content
+(language, A/B test, currency, theme), plus anything recon turns up —
+confirm it's actually keyed with the differential oracle: send two
+requests differing only in that field, with a buster isolating the test
+(point 1 above), and check whether you get two separate cache entries
+(two first-hit `MISS` + distinct bodies) or the same entry collapsing
+both.
+
+`ckinject discover` automates exactly this against a built-in candidate
+list of headers/cookies/params (extendable with `--extra-header`/
+`--extra-cookie`/`--extra-param` for anything recon-specific), and
+suggests `probe --pair` commands for whatever it finds keyed:
+
+```bash
+ckinject discover --target https://example.com --base-path /somepath
+```
+
+Limitations worth knowing before trusting a `KEYED`/`unkeyed` verdict: it
+tests arbitrary distinguishable string values, not semantically valid
+ones (a malformed `Authorization` header might get rejected differently
+than a malformed `Accept` header, producing a false `KEYED` from an error
+page rather than real keying — override `--value1`/`--value2` if a
+candidate's default values look likely to trip validation); a target that
+isn't deterministic for the test path reports `inconclusive` rather than
+guessing; and conditional/partial keying (a fragment matters only for
+certain paths or certain value ranges) can evade a flat single-path test
+— rerun against a few different base paths if the target's behavior looks
+inconsistent.
 
 ### 3. Boundary probe (the core technique)
 

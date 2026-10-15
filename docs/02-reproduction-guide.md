@@ -143,11 +143,23 @@ the scenario endpoints do.
 
 `/fuzz` is that endpoint: a prefix-matched Nginx location using the same
 ambiguous key, backed by a Flask route that echoes back the full path and
-every header/query param the default probe pairs test. Run the fuzzer
-against the live lab with:
+every header/query param the default probe pairs test. Before boundary
+testing, you can confirm which headers it actually keys on at all with
+`discover`:
 
 ```bash
 cd ../tool
+python -m ckinject.cli discover --target http://localhost:8080 --base-path /fuzz \
+  --no-default-wordlist --extra-header Accept --extra-header Accept-Language \
+  --extra-header Accept-Encoding --extra-header X-Test-Header
+```
+
+Expect `Accept` reported `KEYED` and the other three `unkeyed` — matching
+`/fuzz`'s actual key formula below exactly, and a nice sanity check that
+`discover` and `probe` agree with each other independently. Then run the
+boundary fuzzer:
+
+```bash
 python -m ckinject.cli probe --target http://localhost:8080 --base-path /fuzz
 ```
 

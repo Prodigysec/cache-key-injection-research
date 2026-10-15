@@ -122,8 +122,16 @@ The article's Cloudflare section is a single bypass trick
 - [ ] **Boundary fuzzer** (`tool/ckinject`, in this repo) — black-box
       detection of ambiguous key boundaries via the split-marker technique.
       See `tool/README.md` for current capabilities and `TODO`s there for
-      where to extend it (header-pair matrix expansion, encoding-based
-      probes from Track B, multi-layer-aware mode for Track D).
+      where to extend it (encoding-based probes from Track B,
+      multi-layer-aware mode for Track D).
+- [x] **Fragment discovery** (`ckinject discover`) — the precursor
+      question `probe` used to assume an answer to: is a given
+      header/cookie/query param part of the key *at all*. Built-in
+      candidate lists plus `--extra-*` for recon-specific names; tested
+      against a configurable mock server (`tests/test_discover.py`). Not
+      "surefire" (see `docs/04-testing-methodology.md`) — a flat
+      candidate-list scan can't prove completeness or catch
+      conditional/partial keying.
 - [ ] **Passive fingerprinting pass** — before active fuzzing, flag likely
       candidates at scale: presence of `Vary` with multiple fields,
       `X-Cache`/`CF-Cache-Status`/`Age` headers, response differences
