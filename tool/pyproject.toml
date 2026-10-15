@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ckinject"
 version = "0.1.0"
-description = "Black-box cache key boundary fuzzer (authorized testing only)"
+description = "Black-box cache key fragment discovery and boundary fuzzer (authorized testing only)"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }

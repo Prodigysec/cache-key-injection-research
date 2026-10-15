@@ -6,7 +6,27 @@ import json
 import sys
 from typing import Iterable
 
+from .discover import DiscoverResult
 from .prober import ProbeResult
+
+
+def print_discover_results(results: list[DiscoverResult]) -> int:
+    keyed_count = 0
+    for r in results:
+        if r.keyed is True:
+            status, keyed_count = "KEYED", keyed_count + 1
+        elif r.keyed is False:
+            status = "unkeyed"
+        else:
+            status = "inconclusive"
+        cs = r.cache_status_a or r.cache_status_b
+        cs_str = f" cache-status={cs}" if cs else ""
+        print(f"[{status:12}] {r.kind:6} {r.fragment:30} "
+              f"a={r.fp_a} a2={r.fp_a2} b={r.fp_b}{cs_str}")
+        print(f"               note: {r.note}")
+    print()
+    print(f"{keyed_count} fragment(s) appear keyed, out of {len(results)} tested")
+    return keyed_count
 
 
 def print_results(results: list[ProbeResult]) -> int:
@@ -25,10 +45,10 @@ def print_results(results: list[ProbeResult]) -> int:
     return hits
 
 
-def to_json(results: Iterable[ProbeResult]) -> str:
+def to_json(results: Iterable[ProbeResult] | Iterable[DiscoverResult]) -> str:
     return json.dumps([dataclasses.asdict(r) for r in results], indent=2)
 
 
-def write_json(results: Iterable[ProbeResult], path: str) -> None:
+def write_json(results: Iterable[ProbeResult] | Iterable[DiscoverResult], path: str) -> None:
     with open(path, "w") as f:
         f.write(to_json(results))
