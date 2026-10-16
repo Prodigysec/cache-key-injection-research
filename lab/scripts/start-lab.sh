@@ -16,5 +16,14 @@ export COMPOSE_BAKE=true
 
 docker compose -f docker-compose.yml build --print > "$BAKE_FILE"
 docker buildx bake -f "$BAKE_FILE" --load
-docker compose -f docker-compose.yml up -d --no-build
+
+# --force-recreate matters here, not just cosmetic: nginx.conf is
+# bind-mounted, not baked into the nginx image, so a content-only edit
+# to it never changes the nginx service's image or Compose-visible
+# config -- without --force-recreate, `up -d` sees nothing it thinks
+# needs recreating and leaves the already-running nginx container
+# serving whatever config it loaded at ITS last start, silently stale
+# even after this script "successfully" rebuilds the backend. This bit
+# the lab more than once before this was added.
+docker compose -f docker-compose.yml up -d --no-build --force-recreate
 docker compose -f docker-compose.yml ps

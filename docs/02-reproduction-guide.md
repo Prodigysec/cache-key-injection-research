@@ -23,6 +23,20 @@ use `bash lab/scripts/start-lab.sh`; from `lab/nginx/certs`, use
 a Dockerfile or application code. Docker reuses cached layers and existing
 nonempty certificate files.
 
+**`nginx.conf` specifically needs more than a rebuild to take effect.**
+It's bind-mounted into the container (`lab/nginx/nginx.conf:/etc/nginx/nginx.conf:ro`
+in `docker-compose.yml`), not baked into the image — editing it on disk
+changes nothing about the nginx service's image or Compose-visible config,
+so Compose's own change-detection won't recreate that container on its
+own. `start-lab.sh` forces this with `--force-recreate`; if you're running
+`docker compose` directly instead, use `docker compose up -d --build --force-recreate`
+(or `docker compose restart nginx` for a config-only change) rather than
+plain `up -d --build`. A stale nginx config looks exactly like the lab
+itself being broken — every response 404s with Flask's generic error page,
+`X-Cache` shows hits that shouldn't be possible yet — so if something that
+used to work suddenly doesn't after a config edit, try this before anything
+else.
+
 Services:
 
 | Service | Port(s) | Role |
