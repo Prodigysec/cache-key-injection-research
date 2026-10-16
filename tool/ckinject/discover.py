@@ -36,6 +36,8 @@ class DiscoverResult:
     kind: str  # "header" | "cookie" | "query"
     keyed: Optional[bool]  # True/False, or None if inconclusive
     note: str
+    value1: str
+    value2: str
     fp_a: tuple
     fp_a2: tuple
     fp_b: tuple
@@ -95,6 +97,7 @@ def discover_fragment(
 
     return DiscoverResult(
         fragment=slot.name, kind=kind, keyed=keyed, note=note,
+        value1=value1, value2=value2,
         fp_a=fp_a, fp_a2=fp_a2, fp_b=fp_b,
         cache_status_a=_cache_status(r_a), cache_status_b=_cache_status(r_b),
     )
@@ -106,12 +109,25 @@ def discover(
     headers: Optional[list[str]] = None,
     cookies: Optional[list[str]] = None,
     params: Optional[list[str]] = None,
-    value1: str = "ckdiscoverA",
-    value2: str = "ckdiscoverB",
+    value1: Optional[str] = None,
+    value2: Optional[str] = None,
     session: Optional[requests.Session] = None,
     timeout: float = 10.0,
     verify: bool = True,
 ) -> list[DiscoverResult]:
+    # Fresh random values by default -- NOT a fixed "ckdiscoverA"/"B". A
+    # real, persistent cache remembers what you tested last time; fixed
+    # literals mean every rerun risks hitting whatever got cached under
+    # that exact value on a PREVIOUS run (including a run against a
+    # since-fixed target that cached an error response). The in-memory
+    # mock server used in tests/ starts empty every time, which is
+    # exactly why this never surfaced there -- it only bites a real,
+    # persistent cache across repeated invocations.
+    if value1 is None:
+        value1 = "ckdiscoverA-" + random_marker(8)
+    if value2 is None:
+        value2 = "ckdiscoverB-" + random_marker(8)
+
     session = session or requests.Session()
     results = []
     for h in (headers or []):

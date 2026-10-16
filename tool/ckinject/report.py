@@ -23,6 +23,7 @@ def print_discover_results(results: list[DiscoverResult]) -> int:
         cs_str = f" cache-status={cs}" if cs else ""
         print(f"[{status:12}] {r.kind:6} {r.fragment:30} "
               f"a={r.fp_a} a2={r.fp_a2} b={r.fp_b}{cs_str}")
+        print(f"               values tested: {r.value1!r} / {r.value2!r}")
         print(f"               note: {r.note}")
     print()
     print(f"{keyed_count} fragment(s) appear keyed, out of {len(results)} tested")
