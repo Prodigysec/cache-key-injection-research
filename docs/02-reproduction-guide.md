@@ -182,6 +182,43 @@ and `$http_accept` in this exact key formula and silently broke the
 boundary test for *any* path-or-query-adjacent-to-header pair. The buster
 now lives in a header instead, which this formula doesn't key on.)
 
+## Fragment discovery target: headers, cookies, and query params together
+
+`/fuzz` only keys on one thing (`Accept`), which doesn't really exercise
+`ckinject discover` — a tool meant to classify headers, cookies, *and*
+query params needs a target where more than one category is actually
+keyed. `/discoverlab`'s key is
+`$scheme$proxy_host$uri$http_accept$cookie_session$arg_lang`: one
+fragment from each category, concatenated exactly as unsafely as
+`/fuzz`'s `$uri$http_accept` was.
+
+Run discovery against it:
+
+```bash
+cd tool
+python -m ckinject.cli discover --target http://localhost:8080 --base-path /discoverlab \
+  --no-default-wordlist \
+  --extra-header Accept --extra-header Accept-Language \
+  --extra-cookie session --extra-cookie theme \
+  --extra-param lang --extra-param utm_source
+```
+
+Expect `header:Accept`, `cookie:session`, and `query:lang` reported
+`KEYED`; `header:Accept-Language`, `cookie:theme`, and
+`query:utm_source` reported `unkeyed` — those three are deliberately left
+out of the key formula so this target has genuine negatives, not just
+positives.
+
+**Bonus**: because all three keyed fragments are concatenated with
+nothing between them, this target also demonstrates a boundary collision
+`/fuzz` can't — between a *header and a cookie*, not just a path and a
+header:
+
+```bash
+python -m ckinject.cli probe --target http://localhost:8080 --base-path /discoverlab \
+  --pair "header:Accept,cookie:session"
+```
+
 ## Cleanup
 
 ```bash

@@ -77,6 +77,23 @@ def fuzz(rest):
     return "|".join(f"{k}={v}" for k, v in fields.items())
 
 
+@app.route("/discoverlab")
+def discoverlab():
+    # Target for `ckinject discover` (see tool/README.md and
+    # docs/02-reproduction-guide.md). nginx.conf's "location =
+    # /discoverlab" keys on $http_accept, $cookie_session and $arg_lang
+    # only -- this only reflects those three, the same way /fuzz's and
+    # the scenario endpoints' responses only reflect what's actually
+    # keyed: a real cache HIT never re-invokes the backend at all, so an
+    # unkeyed fragment's value can't influence what gets returned.
+    fields = {
+        "accept": request.headers.get("Accept", ""),
+        "session_cookie": request.cookies.get("session", ""),
+        "lang_param": request.args.get("lang", ""),
+    }
+    return "|".join(f"{k}={v}" for k, v in fields.items())
+
+
 # Everything else (/ad, /h, /anyend, /XY, ...) falls through to Flask's
 # default 404 — this is intentional. The CPDoS and cache-deception
 # scenarios rely on the *cache* serving a stored response for these paths

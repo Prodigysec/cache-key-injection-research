@@ -40,8 +40,13 @@ everywhere you see `ckinject` below; they're equivalent.
 ### Fragment discovery (run this first)
 
 ```bash
-ckinject discover --target http://localhost:8080 --base-path /fuzz
+ckinject discover --target http://localhost:8080 --base-path /discoverlab
 ```
+
+(Against this repo's lab specifically, use `/discoverlab` rather than
+`/fuzz` — `/fuzz` only keys on one header, which doesn't show off a tool
+meant to classify headers, cookies, *and* query params. See
+`docs/02-reproduction-guide.md`'s "Fragment discovery target" section.)
 
 Tests a built-in candidate list of common headers, cookies, and query
 params (`tool/ckinject/wordlists.py`), plus anything you add, against the
