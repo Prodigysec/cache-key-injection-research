@@ -7,6 +7,7 @@ permission to test. See ../../docs/04-testing-methodology.md.
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 
 import requests
@@ -19,8 +20,31 @@ from .report import print_discover_results, print_results, write_json
 from .scheme_check import build_shifted_host, check as scheme_check_fn
 from .wordlists import DEFAULT_COOKIES, DEFAULT_HEADERS, DEFAULT_PARAMS
 
+# Git Bash/MSYS2 on Windows silently rewrites a bare shell argument that
+# starts with "/" into a Windows path (e.g. "/discoverlab" becomes
+# "/C:/Program Files/Git/discoverlab") BEFORE this program ever sees it --
+# this cost an entire debugging session on a real target once, with every
+# symptom (varying X-Cache statuses, inconsistent results) looking like a
+# caching or networking bug rather than what it actually was. A mangled
+# path is recognizable: it has a drive letter immediately after the
+# leading slash, which no real URL path ever does.
+_MANGLED_PATH_RE = re.compile(r"^/[A-Za-z]:[/\\]")
+
+
+def _check_mangled_path(path: str, flag_name: str) -> None:
+    if _MANGLED_PATH_RE.match(path):
+        print(
+            f"error: {flag_name}={path!r} looks like it was mangled by Git "
+            f"Bash/MSYS2's automatic path conversion, not a real path you typed.\n"
+            f"Re-run with MSYS_NO_PATHCONV=1 prefixed to the whole command, e.g.:\n"
+            f"  MSYS_NO_PATHCONV=1 python -m ckinject.cli ...",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
 
 def cmd_probe(args: argparse.Namespace) -> int:
+    _check_mangled_path(args.base_path, "--base-path")
     pairs = pairs_from_names(args.pair) if args.pair else DEFAULT_PAIRS
     session = requests.Session()
     all_results = []
@@ -44,6 +68,7 @@ def cmd_probe(args: argparse.Namespace) -> int:
 
 
 def cmd_discover(args: argparse.Namespace) -> int:
+    _check_mangled_path(args.base_path, "--base-path")
     headers = list(DEFAULT_HEADERS) if not args.no_default_wordlist else []
     cookies = list(DEFAULT_COOKIES) if not args.no_default_wordlist else []
     params = list(DEFAULT_PARAMS) if not args.no_default_wordlist else []
@@ -82,6 +107,7 @@ def cmd_discover(args: argparse.Namespace) -> int:
 
 
 def cmd_scheme_check(args: argparse.Namespace) -> int:
+    _check_mangled_path(args.path, "--path")
     result = scheme_check_fn(
         http_url=args.http_url,
         https_url=args.https_url,
