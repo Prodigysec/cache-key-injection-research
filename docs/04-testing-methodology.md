@@ -26,18 +26,33 @@ infrastructure you own. Nothing here authorizes testing third parties.
    its changelog/commit history. Use a header like `X-<yourname>-Buster`
    with a random value instead; a query-param buster is still fine when
    you aren't testing a path- or query-adjacent-to-header pair.)
-2. **Prefer low-traffic, low-sensitivity endpoints for initial probing.**
+2. **Don't reuse one pooled/keep-alive HTTP connection across many rapid
+   automated requests, if you're scripting this yourself.** `ckinject`
+   used to share one `requests.Session()` (and its underlying connection
+   pool) across every request in a run — this produced consistent, wrong
+   "no collision"/"unkeyed" results against a real target (Nginx in front
+   of a Flask dev-server backend, reached through Docker Desktop's
+   Windows/WSL2 port forwarding): a single isolated request worked every
+   time, the identical request as part of a rapid-fire shared-connection
+   sequence didn't. Root cause wasn't fully pinned down (plausibly the
+   port-forwarding layer, plausibly the dev server's single-threaded
+   handling of pipelined keep-alive requests) — the fix was simply to stop
+   sharing connections: `Connection: close` on every request. If you hit
+   inexplicable, consistent "nothing's keyed" results that contradict a
+   manual `curl` check of the exact same request, this is worth ruling
+   out before trusting the automated result.
+3. **Prefer low-traffic, low-sensitivity endpoints for initial probing.**
    Dummy/test endpoints, 404 pages, or a path you know is rarely hit are
    safer first targets than the homepage or a sensitive page.
-3. **Keep TTLs in mind.** If you successfully poison something, note the
+4. **Keep TTLs in mind.** If you successfully poison something, note the
    cache's `proxy_cache_valid` / TTL behavior (often visible via `Age` or
    `X-Cache` headers across repeated requests) so you know how long your
    test artifact will linger and can plan around it.
-4. **Verify content, not just headers.** An `X-Cache: HIT` alone doesn't
+5. **Verify content, not just headers.** An `X-Cache: HIT` alone doesn't
    prove impact — diff the actual response body/headers against what the
    endpoint should return. Programs want evidence of what a *real* victim
    would have received.
-5. **Have a cleanup plan.** If your test poisons a cache entry a real
+6. **Have a cleanup plan.** If your test poisons a cache entry a real
    user could hit before it expires, know how to invalidate it (purge
    API, waiting out the TTL, or triggering a fresh legitimate request if
    that's sufficient) and be ready to do so immediately, especially for

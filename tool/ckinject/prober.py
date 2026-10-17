@@ -55,6 +55,9 @@ def _build_request(base_url: str, base_path: str) -> dict:
 
 
 def _send(session: requests.Session, base_url: str, req: dict, timeout: float, verify: bool, cache_buster: str) -> requests.Response:
+    # NOTE: `session` is accepted but intentionally unused below -- kept
+    # so callers (probe_pair, discover_fragment) don't need signature
+    # changes. See the Connection: close comment further down for why.
     # The cache buster goes in a header, NOT a query parameter. A query
     # param sits in $is_args/$args, which in a very common key formula
     # (Nginx's own default-ish "$scheme$host$request_uri", or this lab's
@@ -76,7 +79,19 @@ def _send(session: requests.Session, base_url: str, req: dict, timeout: float, v
         # requests/urllib3 can't parse as a URL.
         path = "/" + path
     url = base_url.rstrip("/") + path
-    return session.get(url, headers=headers, params=req["params"], timeout=timeout, verify=verify, allow_redirects=False)
+
+    # Deliberately NOT session.get(): a shared Session pools/reuses the
+    # underlying TCP connection across many rapid sequential requests,
+    # which was confirmed (the hard way) to produce wrong responses
+    # against at least one real deployment -- a Flask dev-server backend
+    # proxied through Nginx via Docker Desktop's Windows/WSL2 port
+    # forwarding. A single isolated request with the identical shape
+    # worked every time; the exact same request as part of a rapid-fire
+    # shared-connection sequence did not. Explicit Connection: close on
+    # top, so even a caller that still passes a real Session doesn't end
+    # up reusing the connection for the next request either.
+    headers["Connection"] = "close"
+    return requests.get(url, headers=headers, params=req["params"], timeout=timeout, verify=verify, allow_redirects=False)
 
 
 def probe_pair(
